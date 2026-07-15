@@ -113,3 +113,18 @@ test('persistencia: store.py existe con save/fresh/comunes', () => {
   for (const cmd of ['def save', 'def fresh', 'def comunes'])
     assert.ok(py.includes(cmd), `falta ${cmd}`);
 });
+
+test('seguridad: guard SSRF rechaza red interna (localhost/LAN/Tailscale)', () => {
+  const sh = readFileSync(join(root, 'scripts/revisar.sh'), 'utf8');
+  assert.match(sh, /ssrf_ok/);
+  assert.match(sh, /is_private or ip\.is_loopback/);
+  assert.match(sh, /100\.64\.0\.0\/10/);   // CGNAT/Tailscale
+  assert.match(sh, /SSRF guard/);
+});
+
+test('seguridad: límites de recursos y hardening del navegador', () => {
+  const sh = readFileSync(join(root, 'scripts/revisar.sh'), 'utf8');
+  assert.match(sh, /--max-filesize/);
+  assert.match(sh, /timeout 30 chromium/);
+  assert.match(sh, /timeout 90 git clone/);
+});

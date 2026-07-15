@@ -22,7 +22,48 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SLUG="$(echo "$URL" | sed -E 's#^https?://##; s#[^a-zA-Z0-9]+#-#g; s#-+$##' | cut -c1-60)"
 OUT="$ROOT/informes/$SLUG"
 mkdir -p "$OUT"
-CURL=(curl -sS -L --max-time 25 -A "SubeSeguroBot/1.0 (revision pre-lanzamiento)")
+# curl endurecido: timeout, tope de descarga (anti sitio gigante) y SIN seguir redirects
+# a hosts que no revalidemos (--max-redirs acotado; el guard SSRF se aplica por request).
+CURL=(curl -sS -L --max-time 25 --max-redirs 5 --max-filesize 10000000
+      -A "SubeSeguroBot/1.0 (revision pre-lanzamiento)")
+
+# ---- Guard SSRF: rechazar URLs que apunten a la red interna ----
+# Sin esto, alguien podría usar SubeSeguro para escanear el localhost/LAN/Tailscale
+# del server. Permitir localhost solo si SUBESEGURO_ALLOW_LOCAL=1 (para pruebas propias).
+ssrf_ok() {
+  python3 - "$1" <<'PY'
+import ipaddress, socket, sys, os
+from urllib.parse import urlparse
+u = urlparse(sys.argv[1])
+host = u.hostname or ""
+allow_local = os.environ.get("SUBESEGURO_ALLOW_LOCAL") == "1"
+try:
+    infos = socket.getaddrinfo(host, None)
+except Exception:
+    sys.exit(0)  # no resuelve: lo maneja el chequeo de accesibilidad (000), no es SSRF
+for fam, _, _, _, sa in infos:
+    ip = ipaddress.ip_address(sa[0])
+    blocked = (ip.is_private or ip.is_loopback or ip.is_link_local
+               or ip.is_reserved or ip.is_multicast
+               or ip in ipaddress.ip_network("100.64.0.0/10"))  # CGNAT/Tailscale
+    if blocked and not allow_local:
+        sys.exit(7)
+sys.exit(0)
+PY
+}
+if ! ssrf_ok "$URL"; then
+  python3 - "$URL" "$OUT/hallazgos.json" <<'PY'
+import json, sys
+json.dump({"url": sys.argv[1], "accesible": False, "hallazgos": [{
+    "categoria": "seguridad", "severidad": "info",
+    "titulo": "Esa dirección no la podemos revisar",
+    "detalle": "La URL apunta a una red interna o privada. Solo revisamos apps "
+               "publicadas en internet. Envíanos el enlace público de tu app."}]},
+    open(sys.argv[2], "w"), ensure_ascii=False, indent=2)
+PY
+  echo "[revisar] URL apunta a red interna/privada — rechazada (SSRF guard)"
+  exit 4
+fi
 
 findings=()   # cada uno: categoria|sev|titulo|detalle   (categoria: seguridad|experiencia)
 add() { findings+=("$1|$2|$3|$4"); }
@@ -63,7 +104,9 @@ fi
 [[ -z "$(hget x-content-type-options)" ]] && addsec bajo "Sin X-Content-Type-Options" "Falta 'nosniff': el navegador puede interpretar archivos como un tipo distinto y abrir la puerta a ataques."
 [[ -z "$(hget referrer-policy)" ]] && addsec bajo "Sin Referrer-Policy" "Sin este header, tu app puede filtrar a otros sitios las URLs internas por las que navega el usuario."
 [[ -z "$(hget permissions-policy)" ]] && addsec bajo "Sin Permissions-Policy" "No se restringen camara, microfono ni geolocalizacion; conviene limitar lo que la pagina puede pedir."
-SERVER="$(hget server)"; POWERED="$(hget x-powered-by)"
+# sanitizar el valor del header antes de meterlo al informe (único dato del sitio que
+# va al texto): solo alfanumérico/espacio/.-/ y acotado, por si trae algo raro.
+POWERED="$(hget x-powered-by | tr -cd 'A-Za-z0-9 ./_-' | cut -c1-40)"
 [[ -n "$POWERED" ]] && addsec bajo "Filtra tecnologia del backend" "El header X-Powered-By expone '$POWERED'; da pistas gratis a un atacante. Conviene ocultarlo."
 # cookies sin flags de seguridad
 COOKIES="$(echo "$HDRS" | grep -i '^set-cookie:')"
@@ -130,10 +173,13 @@ fi
 echo "$HDRS" | grep -qiE '^content-encoding:\s*(gzip|br)' || addexp bajo "Sin compresion" "El servidor no comprime (gzip/brotli); las paginas pesan mas y cargan mas lento de lo necesario."
 
 # ---- 5. Screenshots (evidencia + base para la revision UX) ----
+# chromium ejecuta el JS del sitio (potencialmente hostil): timeout duro + flags de
+# endurecimiento. Corre bajo el aislamiento del systemd unit (PrivateTmp/ProtectSystem).
 if command -v chromium >/dev/null 2>&1; then
   for vp in "390,844:mobile" "1280,900:desktop"; do
     size="${vp%%:*}"; name="${vp##*:}"
-    chromium --headless=new --no-sandbox --disable-gpu --hide-scrollbars \
+    timeout 30 chromium --headless=new --no-sandbox --disable-gpu --hide-scrollbars \
+      --disable-dev-shm-usage --disable-extensions --no-first-run --disable-plugins \
       --window-size="$size" --screenshot="$OUT/screen-$name.png" "$URL" >/dev/null 2>&1 &
   done
   wait
@@ -142,7 +188,9 @@ fi
 # ---- 6. Repo (opcional): gitleaks sobre el clon ----
 if [[ -n "$REPO" ]]; then
   TMP="$(mktemp -d)"
-  if git clone --depth 1 --quiet "$REPO" "$TMP" 2>/dev/null; then
+  # clon acotado: shallow, sin checkout de submódulos, con timeout (anti repo gigante/lento)
+  if GIT_TERMINAL_PROMPT=0 timeout 90 git clone --depth 1 --no-tags \
+       --recurse-submodules=no --quiet "$REPO" "$TMP" 2>/dev/null; then
     LEAKS="$OUT/gitleaks.json"
     gitleaks detect --source "$TMP" --report-format json --report-path "$LEAKS" --no-banner >/dev/null 2>&1
     N="$(jq 'length' "$LEAKS" 2>/dev/null || echo 0)"
