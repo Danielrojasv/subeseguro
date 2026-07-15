@@ -1,4 +1,4 @@
-# Despega — revisión pre-lanzamiento para apps hechas con IA
+# SubeSeguro — revisión pre-lanzamiento para apps hechas con IA
 
 Landing **fake-door** para validar el servicio de revisión (deploy + seguridad + performance)
 dirigido a vibe-coders LATAM. Detrás del formulario no hay motor: cada envío llega por
@@ -16,7 +16,7 @@ Deploy en GitHub Pages al push a `main`. Formulario vía [formsubmit.co](https:/
 (sin backend, sin secretos en el cliente).
 
 ```
-despega/
+subeseguro/
 ├── index.html                  ← landing
 ├── gracias/index.html          ← confirmación post-envío
 ├── tokens.css                  ← Veta (vendorizado de design-system)
@@ -36,7 +36,7 @@ typst compile informe/reporte-ejemplo.typ   # regenerar el PDF (requiere fuente 
 
 ## Operación del fake-door
 
-1. Los envíos llegan al Gmail de Daniel vía formsubmit (asunto `[Despega] Nueva revisión solicitada`).
+1. Los envíos llegan al Gmail de Daniel vía formsubmit (asunto `[SubeSeguro] Nueva revisión solicitada`).
    El PRIMER envío dispara un correo de activación de formsubmit — hay que hacer clic una vez.
 2. Tras activar, formsubmit entrega un endpoint alias aleatorio: reemplazar el email del
    `action` del form por ese alias (para no exponer el correo) y re-pushear.

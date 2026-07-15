@@ -1,4 +1,4 @@
-// Informe de ejemplo — Despega (app ficticia para demostración)
+// Informe de ejemplo — SubeSeguro (app ficticia para demostración)
 #let coral = rgb("#E75736")
 #let teal = rgb("#5C8A86")
 #let ink = rgb("#241F1A")
@@ -26,9 +26,9 @@
     #text(fill: muted)[Los 3 hallazgos más importantes — revisión inicial gratuita]
   ],
   align(right)[
-    #text(fill: coral, size: 14pt)[Despega]
+    #text(fill: coral, size: 14pt)[SubeSeguro]
     #linebreak()
-    #text(fill: muted, size: 9pt)[despega · Veta Studios]
+    #text(fill: muted, size: 9pt)[subeseguro.com · Veta Studios]
   ]
 )
 #v(6pt)
@@ -123,5 +123,5 @@ Un programa automático puede probar miles de contraseñas hasta entrar a las cu
 )
 #v(10pt)
 #align(center)[
-  #text(size: 8.5pt, fill: muted)[Este es un informe de ejemplo con una app ficticia. Revisión de mejores prácticas — no constituye un pentest certificado. \ Despega · un servicio de Veta Studios · Hecho en Chile para toda Latinoamérica]
+  #text(size: 8.5pt, fill: muted)[Este es un informe de ejemplo con una app ficticia. Revisión de mejores prácticas — no constituye un pentest certificado. \ SubeSeguro · un servicio de Veta Studios · Hecho en Chile para toda Latinoamérica]
 ]
