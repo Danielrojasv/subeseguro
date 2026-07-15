@@ -62,3 +62,11 @@ test('logo integrado: assets presentes y referenciados', () => {
   assert.match(html, /assets\/favicon-32\.png/);
   assert.match(html, /<img src="assets\/logo\.png" alt="SubeSeguro"/);
 });
+
+test('mobile: inputs a 16px (sin zoom iOS), teclados optimizados y theme-color', () => {
+  assert.match(html, /form input,form select\{[^}]*font-size:1rem/);
+  assert.match(html, /name="email"[^>]*autocomplete="email"/);
+  assert.match(html, /name="url_app"[^>]*inputmode="url"/);
+  assert.match(html, /<meta name="theme-color" content="#FAF6EE">/);
+  assert.match(html, /@media \(max-width:640px\)/);
+});
