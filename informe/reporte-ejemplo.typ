@@ -26,6 +26,8 @@
     #text(fill: muted)[Los 3 hallazgos más importantes — revisión inicial gratuita]
   ],
   align(right)[
+    #image("logo.png", height: 36pt)
+    #v(2pt)
     #text(fill: coral, size: 14pt)[SubeSeguro]
     #linebreak()
     #text(fill: muted, size: 9pt)[subeseguro.com · Veta Studios]

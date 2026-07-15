@@ -55,3 +55,10 @@ test('los tres tiers de precio están presentes', () => {
 test('página de gracias promete el plazo del informe', () => {
   assert.match(gracias, /48 horas/);
 });
+
+test('logo integrado: assets presentes y referenciados', () => {
+  for (const f of ['assets/logo.png', 'assets/favicon-32.png', 'assets/apple-touch-icon.png', 'informe/logo.png'])
+    assert.ok(existsSync(join(root, f)), `falta ${f}`);
+  assert.match(html, /assets\/favicon-32\.png/);
+  assert.match(html, /<img src="assets\/logo\.png" alt="SubeSeguro"/);
+});
