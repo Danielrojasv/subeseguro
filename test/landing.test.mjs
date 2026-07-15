@@ -70,3 +70,8 @@ test('mobile: inputs a 16px (sin zoom iOS), teclados optimizados y theme-color',
   assert.match(html, /<meta name="theme-color" content="#FAF6EE">/);
   assert.match(html, /@media \(max-width:640px\)/);
 });
+
+test('Nielsen H1: feedback de estado al enviar el formulario', () => {
+  assert.match(html, /Enviando tu app/);
+  assert.match(html, /b\.disabled = true/);
+});
