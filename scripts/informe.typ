@@ -22,6 +22,7 @@
 #set par(leading: 0.65em)
 
 #let data = json(sys.inputs.data)
+#let accesible = data.at("accesible", default: true)
 #let all = data.hallazgos
 #let top = all.slice(0, calc.min(3, all.len()))
 
@@ -53,6 +54,23 @@
 #linebreak()
 #link(data.url)[#text(fill: ink)[#data.url]]
 #v(14pt)
+
+// ---- caso: no pudimos acceder a la app ----
+#if not accesible [
+  #block(fill: ambersoft, radius: 6pt, inset: 14pt)[
+    #text(size: 13pt, fill: amber)[No pudimos acceder a tu app]
+    #v(6pt)
+    #text(fill: ink)[Intentamos abrir #raw(data.url) y no obtuvimos respuesta. Puede pasar por tres razones:]
+    #v(4pt)
+    - La URL está mal escrita (revisa que empiece con #raw("https://") y sea la correcta).
+    - El sitio está caído o todavía no lo has publicado.
+    - Tu app bloquea el acceso automático.
+    #v(6pt)
+    #text(fill: muted)[Confírmanos el link correcto respondiendo este correo y hacemos la revisión enseguida. No te preocupes: no gastaste tu revisión gratis.]
+  ]
+  #v(10pt)
+  #align(center)[#text(size: 8.5pt, fill: muted)[SubeSeguro · un servicio de Veta Studios · Hecho en Chile para toda Latinoamérica]]
+] else [
 
 // ---- resumen ----
 #let crit = all.filter(h => h.severidad == "critico").len()
@@ -98,4 +116,5 @@
 #v(10pt)
 #align(center)[
   #text(size: 8.5pt, fill: muted)[Revisión automática de mejores prácticas — no constituye un pentest certificado. \ SubeSeguro · un servicio de Veta Studios · Hecho en Chile para toda Latinoamérica]
+]
 ]

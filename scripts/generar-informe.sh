@@ -5,7 +5,9 @@
 set -uo pipefail
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-"$ROOT/scripts/revisar.sh" "$@" || exit 1
+# rc 0 = ok · rc 3 = URL no accesible (igual generamos el PDF de aviso) · otro = error
+"$ROOT/scripts/revisar.sh" "$@"; rc=$?
+[[ $rc -ne 0 && $rc -ne 3 ]] && exit 1
 
 URL="${1:-}"; [[ "$URL" =~ ^https?:// ]] || URL="https://$URL"
 SLUG="$(echo "$URL" | sed -E 's#^https?://##; s#[^a-zA-Z0-9]+#-#g; s#-+$##' | cut -c1-60)"

@@ -29,6 +29,24 @@ add() { findings+=("$1|$2|$3"); }
 
 echo "[revisar] $URL  ->  $OUT"
 
+# ---- 0. ¿La app responde? ----
+# Una URL mal escrita o un sitio caído devuelve headers vacíos, y sin este chequeo
+# el motor los leería como "le faltan todos los headers de seguridad" = informe FALSO.
+STATUS="$("${CURL[@]}" -o /dev/null -w "%{http_code}" "$URL" 2>/dev/null)"
+if [[ "$STATUS" == "000" ]]; then
+  python3 - "$URL" "$OUT/hallazgos.json" <<'PY'
+import json, sys
+json.dump({"url": sys.argv[1], "accesible": False, "hallazgos": [{
+    "severidad": "info", "titulo": "No pudimos acceder a tu app",
+    "detalle": "La URL no respondió. Puede estar mal escrita, el sitio caído o "
+               "todavía sin publicar. Confirma el link (que empiece con https:// y "
+               "sea el correcto) e inténtalo de nuevo."}]},
+    open(sys.argv[2], "w"), ensure_ascii=False, indent=2)
+PY
+  echo "[revisar] URL no accesible (HTTP 000) — no genero informe de seguridad falso"
+  exit 3
+fi
+
 # ---- 1. Headers HTTP + TLS ----
 HDRS="$("${CURL[@]}" -D - -o /dev/null "$URL" 2>/dev/null)"
 hget() { echo "$HDRS" | grep -i "^$1:" | head -1 | cut -d: -f2- | tr -d '\r' | sed 's/^ *//'; }
