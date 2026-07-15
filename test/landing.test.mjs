@@ -75,3 +75,12 @@ test('Nielsen H1: feedback de estado al enviar el formulario', () => {
   assert.match(html, /Enviando tu app/);
   assert.match(html, /b\.disabled = true/);
 });
+
+test('motor de revisión: scripts presentes y ejecutables', () => {
+  for (const f of ['scripts/revisar.sh', 'scripts/informe.typ', 'scripts/generar-informe.sh'])
+    assert.ok(existsSync(join(root, f)), `falta ${f}`);
+});
+
+test('formulario apunta al correo de soporte de Veta', () => {
+  assert.match(html, /formsubmit\.co\/soporte\.vetastudios@gmail\.com/);
+});
