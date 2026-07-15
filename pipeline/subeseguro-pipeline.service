@@ -1,0 +1,19 @@
+[Unit]
+Description=SubeSeguro — pipeline de revisión (lee Gmail, corre motor, entrega informe)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/subeseguro
+ExecStart=/usr/bin/python3 -m pipeline.run --loop
+Restart=on-failure
+RestartSec=30
+# El motor clona repos de desconocidos: aislar lo que se pueda del resto del server.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target

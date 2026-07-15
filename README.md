@@ -52,3 +52,13 @@ typst compile informe/reporte-ejemplo.typ   # regenerar el PDF (requiere fuente 
 
 - Español chileno (tuteo), sin emojis en UI, Roboto 300/400 sin bold, coral `#E75736` + teal `#5C8A86`.
 - Los análisis de repos ajenos corren SIEMPRE sandboxeados y nunca con el OAuth del plan Max.
+
+## Pipeline automático (pipeline/)
+
+Lee el Gmail de soporte, corre el motor y entrega el informe. Ver la spec en
+`docs/specs/pipeline-revision-automatica.md`. Modo piloto: el PDF va a Daniel para su
+OK antes de enviarlo al cliente (`AUTO_SEND=0`).
+
+Activar: copiar `pipeline/.env.example` → `pipeline/.env` con la App Password de Gmail,
+luego `python3 -m pipeline.run --once` (o instalar `pipeline/subeseguro-pipeline.service`).
+Tests del parser: `python3 pipeline/test_parse.py`.
