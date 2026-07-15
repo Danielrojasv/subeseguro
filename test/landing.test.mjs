@@ -84,3 +84,13 @@ test('motor de revisión: scripts presentes y ejecutables', () => {
 test('formulario apunta al correo de soporte de Veta', () => {
   assert.match(html, /formsubmit\.co\/soporte\.vetastudios@gmail\.com/);
 });
+
+test('motor: URL inaccesible NO genera informe de seguridad falso', () => {
+  // el guard vive en revisar.sh: HTTP 000 → hallazgos con accesible:false, no headers falsos
+  const sh = readFileSync(join(root, 'scripts/revisar.sh'), 'utf8');
+  assert.match(sh, /STATUS=.*http_code/);
+  assert.match(sh, /"accesible": False/);
+  assert.match(sh, /exit 3/);
+  const typ = readFileSync(join(root, 'scripts/informe.typ'), 'utf8');
+  assert.match(typ, /No pudimos acceder a tu app/);
+});
