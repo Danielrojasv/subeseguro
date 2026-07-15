@@ -115,7 +115,7 @@ Un programa automático puede probar miles de contraseñas hasta entrar a las cu
   block(fill: paper, radius: 6pt, inset: 12pt)[
     #text(size: 11pt)[Lo que también miramos]
     #v(4pt)
-    #text(size: 9.5pt, fill: muted)[HTTPS y dominio: bien configurados. Velocidad de carga: buena en escritorio, mejorable en celular (las imágenes pesan 4 MB). Encontramos 6 hallazgos adicionales de prioridad media y baja — están en el informe completo.]
+    #text(size: 9.5pt, fill: muted)[HTTPS y dominio: bien configurados. Velocidad de carga: buena en escritorio, mejorable en celular (las imágenes pesan 4 MB). Experiencia de usuario: el botón principal se pierde en pantallas chicas. Encontramos 6 hallazgos adicionales de prioridad media y baja — están en el informe completo.]
   ],
   block(fill: rgb("#E7EFEE"), radius: 6pt, inset: 12pt)[
     #text(size: 11pt)[¿Quieres el detalle completo?]
