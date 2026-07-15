@@ -16,9 +16,10 @@ if [[ -z "${2:-}" ]]; then
   fi
 fi
 
-# rc 0 = ok · rc 3 = URL no accesible (igual generamos el PDF de aviso) · otro = error
+# rc 0 = ok · rc 3 = URL no accesible · rc 4 = SSRF (red interna) · otro = error.
+# En 3 y 4 igual generamos el PDF de aviso (el hallazgos.json ya existe).
 "$ROOT/scripts/revisar.sh" "$@"; rc=$?
-[[ $rc -ne 0 && $rc -ne 3 ]] && exit 1
+[[ $rc -ne 0 && $rc -ne 3 && $rc -ne 4 ]] && exit 1
 
 URL="${1:-}"; [[ "$URL" =~ ^https?:// ]] || URL="https://$URL"
 SLUG="$(echo "$URL" | sed -E 's#^https?://##; s#[^a-zA-Z0-9]+#-#g; s#-+$##' | cut -c1-60)"
