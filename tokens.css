@@ -1,0 +1,269 @@
+/* ============================================================================
+   Veta — Sistema de diseño compartido (tokens + componentes base)
+   Inspirado en critter.pet. Importar este archivo en cada app:
+     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+     <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+     <link rel="stylesheet" href="tokens.css">
+   Reglas: solo pesos light(300)/regular(400) — nada de bold. Iconos = Font Awesome.
+   ========================================================================== */
+:root{
+  /* superficie */
+  --paper:#FAF6EE;     /* fondo cálido */
+  --card:#FFFFFF;      /* tarjetas */
+  --ink:#241F1A;       /* texto principal */
+  --muted:#8C8475;     /* texto secundario */
+  --line:#ECE2D1;      /* bordes / hairlines */
+
+  /* marca */
+  --coral:#E75736; --coral-ink:#CC4626; --coral-soft:#FBE4DD; --coral-line:#F3C9BE; /* primario */
+  --teal:#5C8A86;  --teal-ink:#4A726E;  --teal-soft:#E7EFEE;  --teal-line:#CFE0DE;  /* secundario */
+  --wine:#3D001D;  --wine-soft:#EFE0E6; --wine-line:#E0C7D0;                          /* énfasis / oscuro */
+
+  /* estados (apagados para no romper la calidez) */
+  --sage:#3F7A4E;  --sage-soft:#E7F0E6;  --sage-line:#C9DEC9;  /* positivo / éxito */
+  --amber:#B5852A; --amber-soft:#F6ECD6; --amber-line:#E6D3A8; /* advertencia */
+  --danger:#B23A2E;--danger-soft:#F7E2DE;--danger-line:#EBC3BC;/* error / destructivo */
+
+  /* forma (bordes sutiles) */
+  --r-card:8px; --r-input:7px; --r-btn:8px; --r-tag:6px; --r-pill:999px;
+  --shadow-sm:0 1px 2px rgba(36,31,26,.05);
+  --shadow:0 1px 2px rgba(36,31,26,.04), 0 12px 28px -20px rgba(36,31,26,.16);
+
+  --font:"Roboto", system-ui, -apple-system, sans-serif;
+  --mono:ui-monospace, "SF Mono", Menlo, monospace;
+}
+
+*{box-sizing:border-box;}
+body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--font);font-weight:400;
+     line-height:1.5;-webkit-font-smoothing:antialiased;}
+
+/* ---------- tipografía ---------- */
+.ds-eyebrow{font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:400;}
+.ds-h1{font-weight:300;font-size:2rem;letter-spacing:-.015em;margin:0;line-height:1.15;}
+.ds-h2{font-weight:300;font-size:1.45rem;letter-spacing:-.01em;margin:0;line-height:1.2;}
+.ds-h3{font-weight:400;font-size:1.05rem;margin:0;}
+.ds-num{font-weight:300;font-size:3.2rem;line-height:1;letter-spacing:-.02em;font-variant-numeric:tabular-nums;}
+.ds-mono{font-family:var(--mono);font-variant-numeric:tabular-nums;}
+.ds-muted{color:var(--muted);}
+.ds-link{color:var(--coral);text-decoration:none;}
+.ds-link:hover{color:var(--coral-ink);text-decoration:underline;}
+
+/* ---------- header ---------- */
+.ds-header{display:flex;align-items:center;gap:14px;padding:18px 24px;border-bottom:1px solid var(--line);background:var(--card);}
+.ds-mark{width:42px;height:42px;border-radius:var(--r-btn);background:var(--coral-soft);color:var(--coral);
+         display:grid;place-items:center;font-size:1.1rem;}
+.ds-nav{margin-left:auto;display:flex;gap:8px;}
+
+/* ---------- tarjetas ---------- */
+.ds-card{background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:20px;box-shadow:var(--shadow);}
+
+/* ---------- botones ---------- */
+.ds-btn{display:inline-flex;align-items:center;justify-content:center;gap:9px;border:0;border-radius:var(--r-btn);
+        padding:11px 17px;font-family:var(--font);font-weight:400;font-size:.95rem;letter-spacing:.01em;
+        cursor:pointer;color:#fff;background:var(--coral);transition:background .15s;}
+.ds-btn:hover{background:var(--coral-ink);}
+.ds-btn--teal{background:var(--teal);} .ds-btn--teal:hover{background:var(--teal-ink);}
+.ds-btn--danger{background:var(--danger);}
+.ds-btn--ghost{background:transparent;border:1px solid var(--line);color:var(--ink);}
+.ds-btn--ghost:hover{border-color:var(--coral);background:transparent;}
+.ds-btn--ghost i{color:var(--coral);}
+.ds-btn:disabled{opacity:.45;cursor:default;}
+.ds-btn-icon{width:42px;height:42px;padding:0;border-radius:var(--r-input);background:var(--paper);
+             border:1px solid var(--line);color:var(--coral);cursor:pointer;}
+
+/* ---------- formularios ---------- */
+.ds-label{display:block;font-size:.7rem;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);margin:14px 0 6px;}
+.ds-input,.ds-select{width:100%;font-family:var(--font);font-weight:400;font-size:.98rem;color:var(--ink);
+        background:var(--paper);border:1px solid var(--line);border-radius:var(--r-input);padding:11px 13px;}
+.ds-input:focus,.ds-select:focus{outline:none;border-color:var(--coral);box-shadow:0 0 0 3px var(--coral-soft);}
+
+/* ---------- etiquetas / pills ---------- */
+.ds-tag{display:inline-flex;align-items:center;gap:6px;font-size:.78rem;padding:5px 11px;border-radius:var(--r-tag);
+        border:1px solid var(--line);background:var(--paper);color:var(--muted);}
+.ds-tag--coral{color:var(--coral);background:var(--coral-soft);border-color:var(--coral-line);}
+.ds-tag--teal{color:var(--teal-ink);background:var(--teal-soft);border-color:var(--teal-line);}
+.ds-tag--wine{color:var(--wine);background:var(--wine-soft);border-color:var(--wine-line);}
+.ds-tag--sage{color:var(--sage);background:var(--sage-soft);border-color:var(--sage-line);}
+.ds-pill{border-radius:var(--r-pill);}
+
+/* ---------- filas tipo "libro contable" ---------- */
+.ds-row{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px solid var(--line);font-size:.9rem;}
+.ds-row .k{color:var(--muted);font-weight:300;display:flex;align-items:center;gap:9px;}
+.ds-row .k i{width:15px;text-align:center;font-size:.8rem;color:var(--coral);opacity:.85;}
+.ds-row .v{font-variant-numeric:tabular-nums;}
+.ds-row--total{border-bottom:0;border-top:1.5px solid var(--ink);font-size:1.05rem;padding-top:13px;}
+.ds-row--total .k{color:var(--ink);}
+
+/* ---------- stats ---------- */
+.ds-stats{display:flex;gap:12px;flex-wrap:wrap;}
+.ds-stat{flex:1;min-width:120px;background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);padding:14px 16px;text-align:center;}
+.ds-stat .big{font-weight:300;font-size:1.7rem;font-variant-numeric:tabular-nums;}
+.ds-stat small{color:var(--muted);font-size:.74rem;}
+
+/* ---------- tabla ---------- */
+.ds-table{width:100%;border-collapse:collapse;font-size:.9rem;}
+.ds-table th{text-align:left;font-weight:400;font-size:.7rem;letter-spacing:.12em;text-transform:uppercase;
+        color:var(--muted);padding:8px 10px;border-bottom:1px solid var(--line);}
+.ds-table td{padding:10px;border-bottom:1px solid var(--line);font-weight:300;}
+.ds-table tr:hover td{background:var(--paper);}
+
+/* ---------- barras / progreso ---------- */
+.ds-chart{display:flex;align-items:flex-end;gap:8px;height:110px;}
+.ds-chart > div{height:100%;display:flex;flex-direction:column;justify-content:flex-end;flex:1;}
+.ds-bar{width:100%;border-radius:5px 5px 0 0;background:var(--teal);}
+.ds-progress{height:8px;background:var(--line);border-radius:var(--r-pill);overflow:hidden;}
+.ds-progress > span{display:block;height:100%;background:var(--coral);border-radius:var(--r-pill);}
+
+/* ---------- alertas ---------- */
+.ds-alert{display:flex;gap:11px;align-items:flex-start;padding:12px 14px;border-radius:var(--r-input);
+          border:1px solid var(--line);background:var(--card);font-size:.88rem;}
+.ds-alert i{margin-top:2px;}
+.ds-alert--success{background:var(--sage-soft);border-color:var(--sage-line);color:#2C5A39;} .ds-alert--success i{color:var(--sage);}
+.ds-alert--warning{background:var(--amber-soft);border-color:var(--amber-line);color:#7A5A14;} .ds-alert--warning i{color:var(--amber);}
+.ds-alert--danger{background:var(--danger-soft);border-color:var(--danger-line);color:#86281E;} .ds-alert--danger i{color:var(--danger);}
+.ds-alert--info{background:var(--teal-soft);border-color:var(--teal-line);color:var(--teal-ink);} .ds-alert--info i{color:var(--teal);}
+
+/* ---------- estado vacío ---------- */
+.ds-empty{text-align:center;color:var(--muted);padding:32px 16px;}
+.ds-empty i{font-size:1.6rem;color:var(--line);display:block;margin-bottom:10px;}
+
+/* ---------- radio / checkbox / range (nativos, branded con accent-color) ---------- */
+.ds-check{display:flex;align-items:center;gap:9px;font-size:.92rem;cursor:pointer;padding:4px 0;font-weight:400;}
+.ds-check input{width:17px;height:17px;accent-color:var(--coral);cursor:pointer;margin:0;}
+.ds-range{width:100%;accent-color:var(--coral);}
+
+/* switch / toggle */
+.ds-switch{display:inline-flex;align-items:center;gap:10px;cursor:pointer;font-size:.92rem;}
+.ds-switch input{position:absolute;opacity:0;width:0;height:0;}
+.ds-switch .track{width:40px;height:22px;border-radius:var(--r-pill);background:var(--line);transition:background .18s;position:relative;flex:0 0 auto;}
+.ds-switch .track::after{content:"";position:absolute;top:2px;left:2px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:var(--shadow-sm);transition:transform .18s;}
+.ds-switch input:checked + .track{background:var(--coral);}
+.ds-switch input:checked + .track::after{transform:translateX(18px);}
+
+/* tarjeta seleccionable (radio/checkbox como card) */
+.ds-choice{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:var(--r-input);padding:11px 13px;cursor:pointer;background:var(--card);font-size:.92rem;}
+.ds-choice input{accent-color:var(--coral);margin:0;}
+.ds-choice:has(input:checked){border-color:var(--coral);background:var(--coral-soft);}
+
+/* ---------- textarea ---------- */
+.ds-textarea{width:100%;font-family:var(--font);font-weight:400;font-size:.96rem;color:var(--ink);background:var(--paper);
+  border:1px solid var(--line);border-radius:var(--r-input);padding:11px 13px;min-height:104px;resize:vertical;}
+.ds-textarea:focus{outline:none;border-color:var(--coral);box-shadow:0 0 0 3px var(--coral-soft);}
+
+/* ---------- input con icono / addon ---------- */
+.ds-input-icon{position:relative;}
+.ds-input-icon > i{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--muted);font-size:.9rem;pointer-events:none;}
+.ds-input-icon .ds-input{padding-left:34px;}
+.ds-input-group{display:flex;}
+.ds-input-group .addon{display:flex;align-items:center;padding:0 12px;background:var(--paper);border:1px solid var(--line);border-right:0;
+  border-radius:var(--r-input) 0 0 var(--r-input);color:var(--muted);font-size:.95rem;}
+.ds-input-group .ds-input{border-radius:0 var(--r-input) var(--r-input) 0;}
+/* date/time nativos branded */
+.ds-input[type=date],.ds-input[type=time]{accent-color:var(--coral);}
+
+/* ---------- segmented / tabs ---------- */
+.ds-segment{display:inline-flex;background:var(--paper);border:1px solid var(--line);border-radius:var(--r-btn);padding:3px;gap:3px;}
+.ds-segment button{border:0;background:transparent;color:var(--muted);font-family:var(--font);font-size:.86rem;padding:7px 14px;border-radius:6px;cursor:pointer;}
+.ds-segment button.active{background:var(--card);color:var(--ink);box-shadow:var(--shadow-sm);}
+.ds-tabs{display:flex;gap:18px;border-bottom:1px solid var(--line);}
+.ds-tabs a{padding:10px 0;color:var(--muted);text-decoration:none;font-size:.92rem;border-bottom:2px solid transparent;margin-bottom:-1px;cursor:pointer;}
+.ds-tabs a.active{color:var(--ink);border-bottom-color:var(--coral);}
+
+/* ---------- stepper ---------- */
+.ds-stepper{display:inline-flex;align-items:center;border:1px solid var(--line);border-radius:var(--r-input);overflow:hidden;}
+.ds-stepper button{border:0;background:var(--paper);color:var(--coral);width:38px;height:38px;cursor:pointer;font-size:1.05rem;}
+.ds-stepper .val{min-width:44px;text-align:center;font-variant-numeric:tabular-nums;}
+
+/* ---------- dropdown menu ---------- */
+.ds-menu{background:var(--card);border:1px solid var(--line);border-radius:var(--r-input);box-shadow:var(--shadow);padding:6px;min-width:200px;}
+.ds-menu a{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:6px;color:var(--ink);text-decoration:none;font-size:.9rem;cursor:pointer;}
+.ds-menu a:hover{background:var(--paper);}
+.ds-menu a i{width:16px;text-align:center;color:var(--muted);}
+.ds-menu .sep{height:1px;background:var(--line);margin:6px 4px;}
+
+/* ---------- tooltip ---------- */
+.ds-tip{position:relative;}
+.ds-tip::after{content:attr(data-tip);position:absolute;bottom:128%;left:50%;transform:translateX(-50%) translateY(4px);
+  background:var(--ink);color:#fff;font-size:.74rem;padding:5px 9px;border-radius:6px;white-space:nowrap;opacity:0;pointer-events:none;transition:.15s;z-index:10;}
+.ds-tip:hover::after{opacity:1;transform:translateX(-50%) translateY(0);}
+
+/* ---------- accordion ---------- */
+.ds-accordion{border:1px solid var(--line);border-radius:var(--r-input);overflow:hidden;}
+.ds-accordion details + details{border-top:1px solid var(--line);}
+.ds-accordion summary{padding:13px 15px;cursor:pointer;list-style:none;display:flex;align-items:center;justify-content:space-between;gap:10px;font-size:.92rem;}
+.ds-accordion summary::-webkit-details-marker{display:none;}
+.ds-accordion summary::after{content:"\f078";font-family:"Font Awesome 6 Free";font-weight:900;font-size:.7rem;color:var(--muted);transition:transform .2s;}
+.ds-accordion details[open] summary::after{transform:rotate(180deg);}
+.ds-accordion .body{padding:0 15px 14px;color:var(--muted);font-size:.88rem;font-weight:300;}
+
+/* ---------- avatar ---------- */
+.ds-avatar{width:40px;height:40px;border-radius:50%;background:var(--coral-soft);color:var(--coral);display:grid;place-items:center;font-size:.88rem;flex:0 0 auto;}
+
+/* ---------- spinner + skeleton ---------- */
+.ds-spinner{width:22px;height:22px;border:2.5px solid var(--line);border-top-color:var(--coral);border-radius:50%;animation:ds-spin .7s linear infinite;}
+@keyframes ds-spin{to{transform:rotate(360deg);}}
+.ds-skeleton{background:linear-gradient(90deg,var(--line) 25%,#F3EBDD 37%,var(--line) 63%);background-size:400% 100%;animation:ds-shimmer 1.4s ease infinite;border-radius:6px;}
+@keyframes ds-shimmer{0%{background-position:100% 0}100%{background-position:0 0}}
+@media (prefers-reduced-motion:reduce){.ds-spinner,.ds-skeleton{animation:none;}}
+
+/* ---------- pagination ---------- */
+.ds-pagination{display:inline-flex;gap:6px;}
+.ds-pagination a{min-width:34px;height:34px;display:grid;place-items:center;border:1px solid var(--line);border-radius:var(--r-tag);
+  color:var(--ink);text-decoration:none;font-size:.86rem;cursor:pointer;}
+.ds-pagination a.active{background:var(--coral);color:#fff;border-color:var(--coral);}
+.ds-pagination a:hover:not(.active){border-color:var(--coral);}
+
+/* ---------- breadcrumbs ---------- */
+.ds-breadcrumb{display:flex;align-items:center;gap:8px;font-size:.85rem;color:var(--muted);flex-wrap:wrap;}
+.ds-breadcrumb a{color:var(--muted);text-decoration:none;cursor:pointer;}
+.ds-breadcrumb a:hover{color:var(--coral);}
+.ds-breadcrumb .sep{font-size:.58rem;}
+.ds-breadcrumb .cur{color:var(--ink);}
+
+/* ---------- divisores ---------- */
+.ds-divider{border:0;border-top:1px solid var(--line);margin:18px 0;}
+.ds-divider-text{display:flex;align-items:center;gap:12px;color:var(--muted);font-size:.72rem;text-transform:uppercase;letter-spacing:.12em;margin:18px 0;}
+.ds-divider-text::before,.ds-divider-text::after{content:"";flex:1;border-top:1px solid var(--line);}
+
+/* ---------- rating ---------- */
+.ds-rating{color:var(--coral);font-size:.95rem;letter-spacing:3px;}
+.ds-rating .off{color:var(--line);}
+
+/* ---------- modal (overlay con :target, sin JS) ---------- */
+.ds-overlay{display:none;position:fixed;inset:0;background:rgba(36,31,26,.45);z-index:20;}
+.ds-overlay:target{display:block;}
+.ds-modal{position:fixed;z-index:21;top:50%;left:50%;transform:translate(-50%,-50%);width:min(560px,92vw);
+  max-height:88vh;overflow-y:auto;background:var(--card);border:1px solid var(--line);border-radius:var(--r-card);
+  padding:20px;box-shadow:var(--shadow);}
+.ds-modal .close{position:absolute;top:12px;right:14px;color:var(--muted);text-decoration:none;font-size:1.2rem;line-height:1;}
+.ds-modal .close:hover{color:var(--ink);}
+
+/* ---------- calendario ---------- */
+.ds-cal{width:266px;max-width:100%;}
+.ds-cal-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+.ds-cal-head .m{font-size:.95rem;}
+.ds-cal-head button{border:1px solid var(--line);background:var(--card);color:var(--ink);width:30px;height:30px;border-radius:var(--r-tag);cursor:pointer;}
+.ds-cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;}
+.ds-cal-grid .wd{font-size:.64rem;color:var(--muted);text-align:center;text-transform:uppercase;letter-spacing:.04em;padding:4px 0;}
+.ds-cal-grid .d{aspect-ratio:1;display:grid;place-items:center;font-size:.82rem;border-radius:7px;cursor:pointer;color:var(--ink);}
+.ds-cal-grid .d:hover{background:var(--paper);}
+.ds-cal-grid .d.mut{color:var(--line);cursor:default;}
+.ds-cal-grid .d.today{box-shadow:inset 0 0 0 1px var(--coral);color:var(--coral);}
+.ds-cal-grid .d.sel{background:var(--coral);color:#fff;}
+
+/* ---------- tablas: scroll horizontal propio sin romper el ancho de la página.
+   Clave: el contenedor de la tabla y sus ancestros flex/grid necesitan poder
+   encogerse (min-width:0), si no la tabla empuja el ancho. ---------- */
+.ds-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;max-width:100%;min-width:0;}
+.ds-card{min-width:0;}          /* las tarjetas pueden encoger dentro de grid/flex */
+
+/* ---------- responsive (móvil) ---------- */
+@media (max-width:640px){
+  .ds-header{flex-wrap:wrap;padding:14px 16px;}
+  .ds-nav{margin-left:0;width:100%;flex-wrap:wrap;}
+  .ds-h1{font-size:1.7rem;}
+  .ds-num{font-size:2.5rem;}
+  .ds-card{padding:16px;}
+  .ds-btn-icon{width:46px;height:46px;flex:0 0 auto;}
+  .ds-stat{min-width:calc(50% - 6px);} /* 2 por fila en vez de encogerse */
+}
