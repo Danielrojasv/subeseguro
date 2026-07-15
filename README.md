@@ -36,13 +36,17 @@ typst compile informe/reporte-ejemplo.typ   # regenerar el PDF (requiere fuente 
 
 ## Operación del fake-door
 
-1. Los envíos llegan al Gmail de Daniel vía formsubmit (asunto `[SubeSeguro] Nueva revisión solicitada`).
-   El PRIMER envío dispara un correo de activación de formsubmit — hay que hacer clic una vez.
+1. Los envíos llegan a `soporte.vetastudios@gmail.com` vía formsubmit (asunto
+   `[SubeSeguro] Nueva revisión solicitada`). El PRIMER envío dispara un correo de
+   activación de formsubmit — hay que hacer clic una vez.
 2. Tras activar, formsubmit entrega un endpoint alias aleatorio: reemplazar el email del
    `action` del form por ese alias (para no exponer el correo) y re-pushear.
-3. Cada solicitud se analiza a mano con el pipeline de auditorías y se responde con un PDF
-   como el de ejemplo dentro de 48 h.
-4. Cobros del informe completo: link manual de Lemon Squeezy (pendiente cuenta).
+3. Tier GRATIS (automático supervisado): correr `scripts/revisar.sh <url> [repo]` → genera
+   los hallazgos deterministas → PDF top-3 con la plantilla Typst → se reenvía al cliente.
+   Cero trabajo manual de análisis; solo revisar el PDF antes de enviar.
+4. Tier PAGADO: revisión senior de Daniel (informe completo) o done-for-you.
+   Cobros vía link de Lemon Squeezy (pendiente cuenta).
+5. Tope del piloto: 10 revisiones gratis/día. El excedente recibe "estamos llenos esta semana".
 
 ## Reglas
 
