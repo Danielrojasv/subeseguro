@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>SubeSeguro — Sube tu app a producción sin miedo</title>
   <meta name="description" content="Revisión pre-lanzamiento para apps hechas con IA: deploy, seguridad y performance, explicado en español simple y sin juicio. Los 3 hallazgos más importantes, gratis.">
+  <meta name="theme-color" content="#FAF6EE">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400&display=swap" rel="stylesheet">
@@ -64,7 +65,7 @@
     form label{display:block;font-size:.85rem;margin-bottom:6px;color:var(--ink);}
     form label span{color:var(--muted);}
     form input,form select{width:100%;padding:11px 12px;border:1px solid var(--line);border-radius:var(--r-input);
-                background:var(--card);font-family:var(--font);font-size:.95rem;color:var(--ink);}
+                background:var(--card);font-family:var(--font);font-size:1rem;color:var(--ink);}
     form input:focus,form select:focus{outline:none;border-color:var(--teal);}
     .form-card{max-width:520px;margin:0 auto;}
     .faq{max-width:640px;margin:0 auto;}
@@ -83,6 +84,9 @@
       .nav-link{display:none;}
       section{padding:40px 0;}
       .ds-header{padding:14px 18px;}
+      .cta-row{flex-direction:column;align-items:stretch;}
+      .cta-row .btn{justify-content:center;padding:14px 22px;}
+      .trust .wrap{gap:14px;}
     }
   </style>
 </head>
@@ -183,7 +187,7 @@
       <div class="ds-card check">
         <div class="ico"><i class="fa-solid fa-hand-pointer"></i></div>
         <div><h3 class="ds-h3">Experiencia de usuario</h3>
-        <p>Jerarquía visual, claridad del mensaje y fricción del flujo: que la gente entienda tu app y la use.</p></div>
+        <p>Jerarquía visual, claridad del mensaje y cómo se ve y usa tu app desde un celular real.</p></div>
       </div>
       <div class="ds-card check">
         <div class="ico"><i class="fa-solid fa-coins"></i></div>
@@ -250,15 +254,15 @@
         <input type="text" name="_honey" class="honey" tabindex="-1" autocomplete="off">
         <div class="field">
           <label for="url">URL de tu app</label>
-          <input id="url" name="url_app" type="url" placeholder="https://miapp.vercel.app" required>
+          <input id="url" name="url_app" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://miapp.vercel.app" required>
         </div>
         <div class="field">
           <label for="repo">Link del repositorio <span>(opcional)</span></label>
-          <input id="repo" name="repo" type="url" placeholder="https://github.com/usuario/proyecto">
+          <input id="repo" name="repo" type="url" inputmode="url" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="https://github.com/usuario/proyecto">
         </div>
         <div class="field">
           <label for="email">Tu correo</label>
-          <input id="email" name="email" type="email" placeholder="tu@correo.com" required>
+          <input id="email" name="email" type="email" inputmode="email" autocomplete="email" autocapitalize="off" spellcheck="false" placeholder="tu@correo.com" required>
         </div>
         <div class="field">
           <label for="preocupa">Qué te preocupa más</label>
