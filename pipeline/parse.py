@@ -54,17 +54,42 @@ def _find_by_label(text: str, aliases: tuple[str, ...]) -> str | None:
     return None
 
 
+_STRONG_RE = re.compile(r"<strong>\s*(.*?)\s*</strong>", re.I | re.S)
+_PRE_RE = re.compile(r"<pre[^>]*>(.*?)</pre>", re.I | re.S)
+
+
+def _parse_formsubmit_table(raw_body: str) -> dict:
+    """Formato real de formsubmit: cada campo es <strong>etiqueta</strong> en una
+    celda y <pre>valor</pre> en la siguiente. Emparejamos por orden (el header usa
+    <th>, no <strong>, así que los <strong> son solo etiquetas de campo)."""
+    labels = [unescape(l).strip().lower() for l in _STRONG_RE.findall(raw_body)]
+    values = [unescape(v).strip() for v in _PRE_RE.findall(raw_body)]
+    if not labels or not values:
+        return {}
+    # zip corta en el más corto: un <strong> extra del footer no rompe el emparejamiento
+    out = {}
+    for lab, val in zip(labels, values):
+        for canon, aliases in FIELD_ALIASES.items():
+            if lab in aliases:
+                out[canon] = val
+    return out
+
+
 def parse_submission(raw_body: str) -> dict:
     """Devuelve {url, repo, email, preocupacion, ok, motivo}.
 
     ok=False si falta la URL o el email del cliente (no se puede responder).
     """
+    # 1) formato tabla de formsubmit (el real): etiqueta <strong> + valor <pre>
+    tbl = _parse_formsubmit_table(raw_body)
+
     text = _strip_html(raw_body)
 
-    url = _find_by_label(text, FIELD_ALIASES["url_app"])
-    repo = _find_by_label(text, FIELD_ALIASES["repo"])
-    email = _find_by_label(text, FIELD_ALIASES["email"])
-    preoc = _find_by_label(text, FIELD_ALIASES["preocupacion"])
+    # 2) parseo por etiqueta línea a línea (respaldo para texto plano)
+    url = tbl.get("url_app") or _find_by_label(text, FIELD_ALIASES["url_app"])
+    repo = tbl.get("repo") or _find_by_label(text, FIELD_ALIASES["repo"])
+    email = tbl.get("email") or _find_by_label(text, FIELD_ALIASES["email"])
+    preoc = tbl.get("preocupacion") or _find_by_label(text, FIELD_ALIASES["preocupacion"])
 
     # normalizar: quedarnos solo con el token válido dentro del valor
     def _clean_url(v: str | None) -> str | None:

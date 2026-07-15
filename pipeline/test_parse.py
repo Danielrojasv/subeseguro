@@ -6,17 +6,20 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from pipeline.parse import parse_submission
 
-# fixture: correo formsubmit plantilla 'table' (HTML), como el que llega de verdad
+# fixture: formato REAL de formsubmit (verificado 15-jul contra correos en Gmail):
+# etiqueta en <strong>, valor en <pre> de la celda siguiente, + footer con un <strong>
+# extra ("FormSubmit Team") que NO debe romper el emparejamiento por orden.
 FORMSUBMIT_HTML = """
 <html><body>
-<h2>Nueva revisión solicitada</h2>
+<p>Someone just submitted your form on http://subeseguro.com/.</p>
 <table>
-<tr><td>url_app</td><td>https://mikiosco.vercel.app</td></tr>
-<tr><td>repo</td><td>https://github.com/juan/kiosco</td></tr>
-<tr><td>email</td><td>juan.perez@gmail.com</td></tr>
-<tr><td>preocupacion</td><td>seguridad</td></tr>
+ <tr><th>Name</th><th>Value</th></tr>
+ <tr><td><strong>url_app</strong></td><td><pre style="margin:0">https://mikiosco.vercel.app</pre></td></tr>
+ <tr><td><strong>repo</strong></td><td><pre style="margin:0">https://github.com/juan/kiosco</pre></td></tr>
+ <tr><td><strong>email</strong></td><td><pre style="margin:0">juan.perez@gmail.com</pre></td></tr>
+ <tr><td><strong>preocupacion</strong></td><td><pre style="margin:0">seguridad</pre></td></tr>
 </table>
-<p>Sent from <a href="https://formsubmit.co">FormSubmit</a></p>
+<p>Cheers,<br><strong>FormSubmit Team</strong></p>
 </body></html>
 """
 
