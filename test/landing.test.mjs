@@ -94,3 +94,22 @@ test('motor: URL inaccesible NO genera informe de seguridad falso', () => {
   const typ = readFileSync(join(root, 'scripts/informe.typ'), 'utf8');
   assert.match(typ, /No pudimos acceder a tu app/);
 });
+
+test('motor: categoriza hallazgos y cuenta por tipo (seguridad/experiencia)', () => {
+  const sh = readFileSync(join(root, 'scripts/revisar.sh'), 'utf8');
+  assert.match(sh, /addsec\b/);
+  assert.match(sh, /addexp\b/);
+  assert.match(sh, /"conteo":/);
+});
+
+test('informe: teaser del candado con conteo real', () => {
+  const typ = readFileSync(join(root, 'scripts/informe.typ'), 'utf8');
+  assert.match(typ, /hallazgo\(s\) más/);
+  assert.match(typ, /restantes/);
+});
+
+test('persistencia: store.py existe con save/fresh/comunes', () => {
+  const py = readFileSync(join(root, 'scripts/store.py'), 'utf8');
+  for (const cmd of ['def save', 'def fresh', 'def comunes'])
+    assert.ok(py.includes(cmd), `falta ${cmd}`);
+});

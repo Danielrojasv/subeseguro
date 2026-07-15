@@ -6,3 +6,4 @@ pipeline/pipeline.log
 pipeline/state/
 __pycache__/
 *.pyc
+informes/scans.db

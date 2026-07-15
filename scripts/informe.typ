@@ -8,6 +8,7 @@
 #let danger = rgb("#B23A2E"); #let dangersoft = rgb("#F7E2DE")
 #let amber = rgb("#B5852A"); #let ambersoft = rgb("#F6ECD6")
 #let sage = rgb("#3F7A4E"); #let sagesoft = rgb("#E7F0E6")
+#let wine = rgb("#3D001D")
 
 #let sevmap = (
   critico: ("CRÍTICO", danger, dangersoft),
@@ -98,21 +99,30 @@
   #v(11pt)
 ]
 
-#v(2pt)
+// ---- teaser del candado: lo que falta por ver ----
+#let conteo = data.at("conteo", default: (total: all.len(), seguridad: all.len(), experiencia: 0))
+#let restantes = conteo.total - top.len()
+#let rest_seg = calc.max(0, conteo.seguridad - top.filter(h => h.categoria == "seguridad").len())
+#let rest_exp = calc.max(0, conteo.experiencia - top.filter(h => h.categoria == "experiencia").len())
+
+#if restantes > 0 [
+  #block(fill: wine, radius: 6pt, inset: 14pt, width: 100%)[
+    #text(fill: rgb("#F6EDF1"), size: 13pt)[🔒 Y hay #restantes hallazgo(s) más]
+    #v(4pt)
+    #text(fill: rgb("#E6D2DA"), size: 10pt)[
+      Esta revisión gratuita encontró #conteo.total en total: #conteo.seguridad de seguridad y #conteo.experiencia de experiencia y performance. Arriba te mostramos los #top.len() más importantes. Los otros #restantes ---#rest_seg de seguridad y #rest_exp de experiencia--- van en el informe completo, cada uno con el paso a paso para arreglarlo.
+    ]
+  ]
+  #v(10pt)
+]
+
 #line(length: 100%, stroke: 0.5pt + rgb("#ECE2D1"))
 #v(8pt)
-#grid(columns: (1fr, 1fr), gutter: 16pt,
-  block(fill: paper, radius: 6pt, inset: 12pt)[
-    #text(size: 11pt)[El panorama completo]
-    #v(4pt)
-    #text(size: 9.5pt, fill: muted)[Esta revisión gratuita detectó #all.len() hallazgo(s) en total. El informe completo trae todos, priorizados, con el paso a paso para arreglar cada uno y el checklist de lanzamiento.]
-  ],
-  block(fill: rgb("#E7EFEE"), radius: 6pt, inset: 12pt)[
-    #text(size: 11pt)[¿Seguimos?]
-    #v(4pt)
-    #text(size: 9.5pt, fill: muted)[Informe completo con todos los arreglos: US\$29. O te lo dejamos listo y seguro nosotros: desde US\$149. Responde este correo y vemos.]
-  ]
-)
+#block(fill: rgb("#E7EFEE"), radius: 6pt, inset: 12pt, width: 100%)[
+  #text(size: 11pt)[¿Seguimos?]
+  #v(4pt)
+  #text(size: 9.5pt, fill: muted)[Informe completo con TODOS los hallazgos y cómo arreglar cada uno: US\$29. O te lo dejamos listo y seguro nosotros: desde US\$149. Responde este correo y lo vemos.]
+]
 #v(10pt)
 #align(center)[
   #text(size: 8.5pt, fill: muted)[Revisión automática de mejores prácticas — no constituye un pentest certificado. \ SubeSeguro · un servicio de Veta Studios · Hecho en Chile para toda Latinoamérica]
