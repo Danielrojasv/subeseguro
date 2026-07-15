@@ -74,6 +74,22 @@ def bump_daily() -> None:
     marker.write_text(str(daily_count() + 1))
 
 
+def find_junk_folder(M: imaplib.IMAP4) -> str | None:
+    """Ubica la carpeta de spam por el flag \\Junk (robusto al idioma/nombre)."""
+    typ, boxes = M.list()
+    if typ != "OK" or not boxes:
+        return None
+    for raw in boxes:
+        line = raw.decode(errors="replace") if isinstance(raw, bytes) else str(raw)
+        if "\\Junk" in line:
+            # el nombre va entre comillas al final: ... "/" "[Gmail]/Spam"
+            m = re.search(r'"([^"]+)"\s*$', line)
+            if m:
+                return m.group(1)
+    # respaldo típico de Gmail
+    return "[Gmail]/Spam"
+
+
 def body_text(msg: email.message.Message) -> str:
     parts = []
     if msg.is_multipart():
@@ -162,40 +178,51 @@ def process_once(dry: bool = False) -> int:
 
     M = imaplib.IMAP4_SSL(IMAP_HOST)
     M.login(user, pw)
-    M.select("INBOX")
-    typ, data = M.search(None, '(UNSEEN SUBJECT "SubeSeguro")')
-    ids = data[0].split() if data and data[0] else []
-    log(f"{len(ids)} solicitud(es) nueva(s)")
+
+    # Revisar INBOX Y la carpeta de spam: los correos de formsubmit a veces caen en
+    # spam y el pipeline los perdería. Buscamos la carpeta \Junk sin fiarnos del nombre.
+    folders = ["INBOX"]
+    junk = find_junk_folder(M)
+    if junk:
+        folders.append(junk)
 
     done = 0
-    for num in ids:
-        if daily_count() >= limit:
-            log(f"tope diario ({limit}) alcanzado — el resto queda para mañana")
-            break
-        typ, md = M.fetch(num, "(RFC822)")
-        msg = email.message_from_bytes(md[0][1])
-        sub = parse_submission(body_text(msg))
-        if not sub["ok"]:
-            log(f"solicitud ilegible ({sub['motivo']}) — la dejo sin leer para revisar a mano")
+    for folder in folders:
+        typ, _ = M.select(folder)
+        if typ != "OK":
             continue
-        log(f"solicitud: {sub['url']} (cliente {sub['email']})")
-        if dry:
-            log("  [dry-run] no corro motor ni envío")
-            continue
+        typ, data = M.search(None, '(UNSEEN SUBJECT "SubeSeguro")')
+        ids = data[0].split() if data and data[0] else []
+        if ids:
+            log(f"{len(ids)} solicitud(es) nueva(s) en {folder}")
+        for num in ids:
+            if daily_count() >= limit:
+                log(f"tope diario ({limit}) alcanzado — el resto queda para mañana")
+                break
+            typ, md = M.fetch(num, "(RFC822)")
+            msg = email.message_from_bytes(md[0][1])
+            sub = parse_submission(body_text(msg))
+            if not sub["ok"]:
+                log(f"solicitud ilegible ({sub['motivo']}) — la dejo sin leer para revisar a mano")
+                continue
+            log(f"solicitud: {sub['url']} (cliente {sub['email']})")
+            if dry:
+                log("  [dry-run] no corro motor ni envío")
+                continue
 
-        pdf = run_engine(sub["url"], sub.get("repo"))
-        if not pdf:
-            log("  motor no generó PDF — la dejo para revisar a mano")
-            continue
+            pdf = run_engine(sub["url"], sub.get("repo"))
+            if not pdf:
+                log("  motor no generó PDF — la dejo para revisar a mano")
+                continue
 
-        if auto:
-            send_mail(sub["email"], "Tu informe de SubeSeguro", CLIENT_BODY, pdf)
-        else:
-            send_mail(owner, f"[Revisar] {sub['url']}", review_body(sub), pdf)
+            if auto:
+                send_mail(sub["email"], "Tu informe de SubeSeguro", CLIENT_BODY, pdf)
+            else:
+                send_mail(owner, f"[Revisar] {sub['url']}", review_body(sub), pdf)
 
-        M.store(num, "+FLAGS", "\\Seen")   # marcar leído: no reprocesar
-        bump_daily()
-        done += 1
+            M.store(num, "+FLAGS", "\\Seen")   # marcar leído: no reprocesar
+            bump_daily()
+            done += 1
 
     M.logout()
     log(f"pasada lista: {done} procesada(s)")
