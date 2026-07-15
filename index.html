@@ -324,5 +324,13 @@
   </div>
 </footer>
 
+<script>
+  document.querySelector('#form form').addEventListener('submit', function () {
+    var b = this.querySelector('button[type="submit"]');
+    b.disabled = true;
+    b.innerHTML = '<i class="fa-solid fa-circle-notch fa-spin"></i>Enviando tu app…';
+  });
+</script>
+
 </body>
 </html>
