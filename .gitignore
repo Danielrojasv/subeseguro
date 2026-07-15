@@ -1,1 +1,8 @@
 informes/
+
+# pipeline
+pipeline/.env
+pipeline/pipeline.log
+pipeline/state/
+__pycache__/
+*.pyc
