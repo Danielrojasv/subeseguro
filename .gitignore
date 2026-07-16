@@ -7,3 +7,4 @@ pipeline/state/
 __pycache__/
 *.pyc
 informes/scans.db
+scans.db
