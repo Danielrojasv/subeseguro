@@ -152,8 +152,9 @@ https://subeseguro.lemonsqueezy.com/checkout/buy/7108710e-5e74-4f3a-b96b-d621b7f
 
 Apenas nos llegue tu pago te escribimos para coordinar (si tu app tiene
 repositorio, ahí te pedimos acceso de solo lectura). Y si prefieres que
-apliquemos los arreglos del informe por ti (desde US$149; cualquier trabajo
-extra se cotiza aparte), responde este correo y lo vemos.
+apliquemos los arreglos puntuales del informe por ti (desde US$149), responde
+este correo y lo vemos. Trabajo extra o hallazgos que requieran rediseñar
+partes de la app se informan y se cotizan aparte, siempre antes de cobrarte.
 
 Un abrazo,
 El equipo de SubeSeguro

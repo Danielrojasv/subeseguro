@@ -121,7 +121,7 @@
 #block(fill: rgb("#E7EFEE"), radius: 6pt, inset: 12pt, width: 100%)[
   #text(size: 11pt)[¿Seguimos?]
   #v(4pt)
-  #text(size: 9.5pt, fill: muted)[Informe completo con TODOS los hallazgos y cómo arreglar cada uno: #link("https://subeseguro.lemonsqueezy.com/checkout/buy/7108710e-5e74-4f3a-b96b-d621b7f4212a")[#text(fill: rgb("#B8412A"), weight: "medium")[comprar por US\$29]]. O aplicamos los arreglos del informe por ti: desde US\$149 (cualquier trabajo extra se cotiza aparte) — responde este correo y lo vemos.]
+  #text(size: 9.5pt, fill: muted)[Informe completo con TODOS los hallazgos y cómo arreglar cada uno: #link("https://subeseguro.lemonsqueezy.com/checkout/buy/7108710e-5e74-4f3a-b96b-d621b7f4212a")[#text(fill: rgb("#B8412A"), weight: "medium")[comprar por US\$29]]. O aplicamos los arreglos puntuales del informe por ti: desde US\$149. Trabajo extra o hallazgos que requieran rediseñar partes de la app se informan y cotizan aparte — responde este correo y lo vemos.]
 ]
 #v(10pt)
 #align(center)[
