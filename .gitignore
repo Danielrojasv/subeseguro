@@ -8,3 +8,4 @@ __pycache__/
 *.pyc
 informes/scans.db
 scans.db
+pipeline/.env.meta
