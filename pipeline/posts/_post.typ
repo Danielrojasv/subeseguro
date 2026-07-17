@@ -29,7 +29,7 @@
       circle(radius: 4.5pt, fill: cyellow),
       circle(radius: 4.5pt, fill: teal),
       h(12pt),
-      text(size: 10.5pt, fill: cgray, font: "Liberation Mono")[revision — subeseguro],
+      text(size: 10.5pt, fill: cgray, font: "Liberation Mono")[revision · subeseguro],
     ))
     line(length: 100%, stroke: 0.6pt + rgb("#33323E"))
     box(width: 100%, inset: (x: 18pt, y: 14pt), {

@@ -11,5 +11,5 @@
     (coral, [▲ CRÍTICO #text(fill: cwhite, size: 10.5pt)[ claves reales en un archivo público]]),
   ),
   annotation: [Subir la carpeta completa a GitHub es cómodo, pero el #mono[.env] #hl[no debería ir nunca]. Con esas claves alguien puede gastar tu saldo o cobrar a tu nombre.],
-  sub: [Un .gitignore bien puesto lo evita. Y si ya se subió, borrarlo no basta: hay que rotar las claves.],
+  sub: [Un .gitignore bien puesto lo evita. Y si ya se subió, borrarlo no basta, hay que rotar las claves.],
 )
