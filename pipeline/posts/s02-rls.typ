@@ -10,6 +10,6 @@
     (cgray, [\# 3.412 filas devueltas con la llave pública]),
     (coral, [▲ CRÍTICO #text(fill: cwhite, size: 10.5pt)[ Row Level Security apagado en 'usuarios']]),
   ),
-  annotation: [Con RLS apagado, la llave que va en el navegador puede leer #hl[toda la tabla]: nombres, correos y teléfonos de todos tus usuarios, con una sola línea.],
-  sub: [Supabase no activa las reglas por ti. Hay que definirlas tabla por tabla — es el paso que casi nadie hace.],
+  annotation: [Con RLS apagado, la llave que va en el navegador puede leer #hl[toda la tabla]. Nombres, correos y teléfonos de todos tus usuarios, con una sola línea.],
+  sub: [Supabase no activa las reglas por ti. Hay que definirlas tabla por tabla, y es el paso que casi nadie hace.],
 )

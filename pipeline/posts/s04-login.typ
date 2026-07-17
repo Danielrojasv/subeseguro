@@ -11,5 +11,5 @@
     (coral, [▲ ALTO #text(fill: cwhite, size: 10.5pt)[ login sin límite de intentos]]),
   ),
   annotation: [Sin un freno, un bot puede probar #hl[millones de contraseñas] hasta entrar. Es la puerta más barata de forzar en cualquier app.],
-  sub: [Un límite por IP, o un captcha después de X intentos fallidos, lo corta de raíz.],
+  sub: [Un límite por IP, o un captcha después de varios intentos fallidos, lo corta de raíz.],
 )
