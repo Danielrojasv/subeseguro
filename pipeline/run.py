@@ -150,8 +150,10 @@ Si quieres el informe completo con todos los hallazgos y el paso a paso para
 arreglarlos, lo puedes comprar aquí (US$29):
 https://subeseguro.lemonsqueezy.com/checkout/buy/7108710e-5e74-4f3a-b96b-d621b7f4212a
 
-Apenas nos llegue tu pago te escribimos para coordinar (si tu app tiene
-repositorio, ahí te pedimos acceso de solo lectura). Y si prefieres que
+Apenas nos llegue tu pago te escribimos para coordinar. Si tu app tiene
+repositorio en GitHub, invita como colaborador de solo lectura a la cuenta
+subeseguro-revisor y la revisión sale bastante más completa (puedes quitar
+el acceso cuando quieras, todo queda confidencial). Y si prefieres que
 apliquemos los arreglos puntuales del informe por ti (desde US$149), responde
 este correo y lo vemos. Trabajo extra o hallazgos que requieran rediseñar
 partes de la app se informan y se cotizan aparte, siempre antes de cobrarte.

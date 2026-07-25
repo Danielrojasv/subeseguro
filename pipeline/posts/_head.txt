@@ -1,0 +1,4 @@
+#import "_post.typ": *
+#set page(width: 540pt, height: 540pt, margin: (x: 36pt, top: 34pt, bottom: 30pt), fill: paper)
+#set text(font: "Roboto", weight: "light", fill: ink)
+
