@@ -9,4 +9,5 @@ __pycache__/
 informes/scans.db
 scans.db
 pipeline/.env.meta
+pipeline/.env*.bak
 pipeline/posts/*.png
