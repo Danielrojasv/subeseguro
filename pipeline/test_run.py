@@ -10,8 +10,13 @@ def test_client_body_pide_invitar_cuenta_revisor():
     assert "subeseguro-revisor" in CLIENT_BODY
     assert "solo lectura" in CLIENT_BODY
 
-def test_client_body_mantiene_link_de_pago():
-    assert "subeseguro.lemonsqueezy.com/checkout" in CLIENT_BODY
+def test_client_body_ofrece_pago_manual():
+    # Lemon Squeezy rechazó la tienda (26-jul-2026): el pago del informe
+    # completo se coordina respondiendo el correo, sin link de checkout
+    assert "US$29" in CLIENT_BODY
+    assert "quiero el informe completo" in CLIENT_BODY
+    assert "datos de pago" in CLIENT_BODY
+    assert "lemonsqueezy" not in CLIENT_BODY
 
 if __name__ == "__main__":
     for name, fn in sorted(globals().items()):

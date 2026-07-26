@@ -147,10 +147,9 @@ hallazgos más importantes de la revisión pre-lanzamiento (seguridad, deploy,
 performance y experiencia de usuario), explicados en simple.
 
 Si quieres el informe completo con todos los hallazgos y el paso a paso para
-arreglarlos, lo puedes comprar aquí (US$29):
-https://subeseguro.lemonsqueezy.com/checkout/buy/7108710e-5e74-4f3a-b96b-d621b7f4212a
-
-Apenas nos llegue tu pago te escribimos para coordinar. Si tu app tiene
+arreglarlos, cuesta US$29. Responde este correo con "quiero el informe completo"
+y te mandamos los datos de pago (tarjeta, PayPal o transferencia si estás en
+Chile). Apenas nos llegue tu pago te escribimos para coordinar. Si tu app tiene
 repositorio en GitHub, invita como colaborador de solo lectura a la cuenta
 subeseguro-revisor y la revisión sale bastante más completa (puedes quitar
 el acceso cuando quieras, todo queda confidencial). Y si prefieres que
