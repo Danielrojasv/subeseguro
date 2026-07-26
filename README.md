@@ -45,7 +45,8 @@ typst compile informe/reporte-ejemplo.typ   # regenerar el PDF (requiere fuente 
    los hallazgos deterministas → PDF top-3 con la plantilla Typst → se reenvía al cliente.
    Cero trabajo manual de análisis; solo revisar el PDF antes de enviar.
 4. Tier PAGADO: revisión senior de Daniel (informe completo) o done-for-you.
-   Cobros vía link de Lemon Squeezy (pendiente cuenta).
+   Cobros manuales por correo (tarjeta/PayPal/transferencia): Lemon Squeezy rechazó
+   la tienda el 26-jul-2026; alternativa MoR futura si el piloto valida (Paddle).
 5. Tope del piloto: 10 revisiones gratis/día. El excedente recibe "estamos llenos esta semana".
 
 ## Reglas
