@@ -14,8 +14,21 @@ test('el formulario apunta a formsubmit y redirige a /gracias/', () => {
 });
 
 test('campos requeridos del embudo: url de la app y email', () => {
-  assert.match(html, /name="url_app" type="url"[^>]*required/);
+  // url_app va como type="text": type="url" bloquea el envío si el usuario
+  // escribe "miapp.vercel.app" sin https:// (hallazgo UX 26-jul, mata
+  // conversión mobile); el esquema lo completa el script antes de enviar
+  assert.match(html, /name="url_app" type="text"[^>]*inputmode="url"[^>]*required/);
   assert.match(html, /name="email" type="email"[^>]*required/);
+});
+
+test('el script normaliza URLs sin esquema antes de enviar', () => {
+  assert.match(html, /\^https\?:\\\/\\\//);
+  assert.match(html, /'https:\/\/' \+ v/);
+});
+
+test('sin rayas largas en la prosa (regla anti-tells de IA)', () => {
+  assert.ok(!html.includes('—'), 'index.html no debe tener em dash');
+  assert.ok(!gracias.includes('—'), 'gracias no debe tener em dash');
 });
 
 test('el repo es opcional (sin required)', () => {
