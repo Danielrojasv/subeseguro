@@ -1,0 +1,17 @@
+{
+  "name": "subeseguro",
+  "version": "1.0.0",
+  "description": "Revisión pre-lanzamiento para apps hechas con IA",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "test": "node --test test/",
+    "ux": "node scripts/ux-audit/cli.mjs",
+    "ux:self": "node scripts/ux-audit/cli.mjs http://localhost:8080 --fail-on=alto"
+  },
+  "license": "UNLICENSED",
+  "packageManager": "pnpm@10.34.4",
+  "dependencies": {
+    "puppeteer-core": "^25.5.0"
+  }
+}

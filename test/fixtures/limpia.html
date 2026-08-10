@@ -1,0 +1,61 @@
+<!doctype html>
+<!-- Fixture de referencia: página que pasa TODOS los chequeos de la fase 1.
+     Es también la semilla de la plantilla base de Veta: cualquier sitio nuevo
+     debería nacer cumpliendo lo que hay acá. Si un chequeo empieza a marcar
+     esta página, el falso positivo es del chequeo. -->
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#FAF6EE">
+  <meta name="description" content="Página limpia de referencia para los chequeos de experiencia.">
+  <meta property="og:title" content="Página limpia">
+  <link rel="icon" href="data:,">
+  <title>Página limpia de prueba</title>
+  <!-- medición instalada: sin esto no se puede diagnosticar el embudo -->
+  <script data-goatcounter="https://ejemplo.goatcounter.com/count" async src="data:text/javascript,"></script>
+  <style>
+    :root { --coral: #E75736; --ink: #241F1A; --line: #ECE2D1; }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: system-ui, sans-serif; color: var(--ink); }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
+    h1 { font-size: 30px; margin: 16px 0; }
+    img { max-width: 100%; height: auto; }
+    label { display: block; font-size: 14px; margin: 14px 0 6px; }
+    input, select { width: 100%; font-size: 16px; padding: 12px; border: 1px solid var(--line); }
+    .btn { display: inline-flex; align-items: center; justify-content: center;
+           min-height: 48px; padding: 12px 22px; background: var(--coral);
+           color: #fff; text-decoration: none; border: 0; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>Un titular que sí cabe en la pantalla</h1>
+    <a class="btn" href="#form">Empezar gratis</a>
+
+    <p>Si prefieres, escríbenos a hola@ejemplo.cl y te respondemos.
+       <a href="mailto:hola@ejemplo.cl">Abrir el correo</a></p>
+
+    <form id="form" action="/enviar" method="post">
+      <label for="sitio">Dirección de tu sitio</label>
+      <input id="sitio" name="sitio" type="text" inputmode="url" autocapitalize="off"
+             autocorrect="off" spellcheck="false" required>
+
+      <label for="correo">Tu correo</label>
+      <input id="correo" name="correo" type="email" inputmode="email"
+             autocomplete="email" autocapitalize="off" required>
+
+      <label for="fono">Tu teléfono <span>(opcional)</span></label>
+      <input id="fono" name="fono" type="tel" inputmode="tel" autocomplete="tel">
+
+      <label for="plan">Qué necesitas <span>(opcional)</span></label>
+      <select id="plan" name="plan">
+        <option value="a">Una revisión</option>
+        <option value="b">Otra cosa</option>
+      </select>
+
+      <p><button class="btn" type="submit">Enviar</button></p>
+    </form>
+  </div>
+</body>
+</html>

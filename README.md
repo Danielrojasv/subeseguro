@@ -49,9 +49,46 @@ typst compile informe/reporte-ejemplo.typ   # regenerar el PDF (requiere fuente 
    la tienda el 26-jul-2026; alternativa MoR futura si el piloto valida (Paddle).
 5. Tope del piloto: 10 revisiones gratis/día. El excedente recibe "estamos llenos esta semana".
 
+## Motor de experiencia (`scripts/ux-audit/`)
+
+Abre la página en chromium y **mide** en vez de adivinar: scroll horizontal, tamaño real
+de los campos, targets táctiles, teclados por campo, labels, validación que bloquea envíos,
+medición instalada. De paso deja las capturas mobile y desktop que consume el informe.
+
+Está construido como herramienta suelta a propósito, porque tiene tres usos:
+
+```bash
+pnpm install                                   # una vez (usa el chromium del sistema)
+
+pnpm ux https://app-del-cliente.com            # 1. motor, sobre el sitio de un cliente
+pnpm ux http://localhost:8080                  # 2. mientras construyes un sitio propio
+pnpm ux http://localhost:8080 --fail-on=alto   # 3. puerta de CI, sale 1 si hay algo grave
+```
+
+Opciones: `--json`, `--out=archivo.json`, `--shots=dir`, `--timeout=ms`.
+
+Arquitectura, y la razón de que sea así:
+
+- `probe.mjs` corre **dentro** de la página y solo recolecta datos crudos. No juzga nada.
+- `checks/*.mjs` son funciones puras sobre ese snapshot. Ahí vive todo el criterio.
+- Esa separación permite testear sin navegador (snapshots sintéticos, milisegundos) y
+  agregar un chequeo nuevo sin tocar el recolector.
+
+`revisar.sh` lo llama y fusiona sus hallazgos en `hallazgos.json` bajo la categoría
+`experiencia`, con un campo `capa` (`mobile`, `formulario`, …). Si el módulo no está
+instalado o falla, el informe sale igual con los chequeos estáticos.
+
+Fixtures de referencia en `test/fixtures/`: `rota.html` tiene todos los problemas y
+`limpia.html` no tiene ninguno. La limpia es además la semilla de la plantilla base:
+un sitio nuevo debería nacer cumpliendo lo que hay ahí.
+
+Inventario completo de la metodología y las fases que faltan: mdview
+`subeseguro-motor-experiencia-plan.md`.
+
 ## Reglas
 
 - Español chileno (tuteo), sin emojis en UI, Roboto 300/400 sin bold, coral `#E75736` + teal `#5C8A86`.
+- Todo sitio propio nuevo pasa `pnpm ux` antes de darse por listo, no después.
 - Los análisis de repos ajenos corren SIEMPRE sandboxeados y nunca con el OAuth del plan Max.
 
 ## Pipeline automático (pipeline/)

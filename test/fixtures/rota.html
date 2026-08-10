@@ -1,0 +1,42 @@
+<!doctype html>
+<!-- Fixture de referencia: página con TODOS los problemas de la fase 1.
+     Sirve de red de seguridad. Si un chequeo deja de detectar lo suyo, este
+     archivo lo delata. No tocar sin actualizar test/ux-audit.test.mjs. -->
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Página rota de prueba</title>
+  <style>
+    body { margin: 0; font-family: system-ui, sans-serif; }
+    h1 { font-size: 64px; margin: 0; }            /* no escala en celular */
+    .ancha { width: 1400px; background: #eee; }   /* fuerza scroll horizontal */
+    input, select { font-size: 13px; padding: 4px; }  /* iOS hace zoom */
+    .btn-chico { display: inline-block; background: #E75736; color: #fff;
+                 padding: 4px 10px; height: 26px; text-decoration: none; }
+    .fijo { position: fixed; bottom: 0; left: 0; right: 0; background: #333; color: #fff; padding: 8px; }
+  </style>
+</head>
+<body>
+  <h1>Un titular gigante que no se achica nunca</h1>
+
+  <div class="ancha">Este bloque tiene ancho fijo y empuja la página hacia el lado.</div>
+
+  <img src="data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7"
+       style="width:1600px;height:20px" alt="">
+
+  <p>Escríbenos y te respondemos: <a href="mailto:hola@ejemplo.cl">mándanos un correo</a></p>
+
+  <form action="/enviar" method="post">
+    <input type="url" name="sitio" placeholder="Tu sitio web" required>
+    <input type="text" name="correo" placeholder="Tu correo" required>
+    <input type="text" name="telefono" placeholder="Tu teléfono">
+    <input type="text" name="empresa" placeholder="Empresa" pattern="[A-Za-z]{3,20}">
+    <a class="btn-chico" href="#enviar">Enviar</a>
+  </form>
+
+  <div role="listbox" tabindex="0">Elige una opción</div>
+
+  <div class="fijo">Barra fija sin zona segura</div>
+</body>
+</html>

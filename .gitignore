@@ -1,4 +1,5 @@
 informes/
+node_modules/
 
 # pipeline
 pipeline/.env

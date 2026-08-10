@@ -172,10 +172,24 @@ fi
 # compresion
 echo "$HDRS" | grep -qiE '^content-encoding:\s*(gzip|br)' || addexp bajo "Sin compresion" "El servidor no comprime (gzip/brotli); las paginas pesan mas y cargan mas lento de lo necesario."
 
-# ---- 5. Screenshots (evidencia + base para la revision UX) ----
-# chromium ejecuta el JS del sitio (potencialmente hostil): timeout duro + flags de
-# endurecimiento. Corre bajo el aislamiento del systemd unit (PrivateTmp/ProtectSystem).
-if command -v chromium >/dev/null 2>&1; then
+# ---- 5. Auditoria de experiencia + screenshots (motor ux-audit) ----
+# Abre la pagina en chromium, mide de verdad (scroll horizontal, tamano de los
+# campos, targets tactiles, teclados, labels, validacion que bloquea envios) y
+# de paso deja las capturas. Reemplaza al bloque que solo sacaba fotos.
+#
+# chromium ejecuta el JS del sitio (potencialmente hostil): timeout duro + flags
+# de endurecimiento dentro del modulo. Corre bajo el aislamiento del systemd unit.
+UXJSON="$OUT/ux.json"
+rm -f "$UXJSON"
+if command -v node >/dev/null 2>&1 && [[ -d "$ROOT/node_modules/puppeteer-core" ]]; then
+  timeout 180 node "$ROOT/scripts/ux-audit/cli.mjs" "$URL" \
+      --out="$UXJSON" --shots="$OUT" --timeout=30000 >/dev/null 2>&1 \
+    || echo "[revisar] ux-audit no completo la pasada; sigo con el resto"
+else
+  echo "[revisar] ux-audit no disponible (falta node o pnpm install); solo capturas"
+fi
+# Respaldo: si ux-audit no dejo capturas, sacarlas con chromium directo.
+if [[ ! -f "$OUT/screen-mobile.png" ]] && command -v chromium >/dev/null 2>&1; then
   for vp in "390,844:mobile" "1280,900:desktop"; do
     size="${vp%%:*}"; name="${vp##*:}"
     timeout 30 chromium --headless=new --no-sandbox --disable-gpu --hide-scrollbars \
@@ -202,14 +216,28 @@ if [[ -n "$REPO" ]]; then
 fi
 
 # ---- Emitir hallazgos.json (ordenado por severidad, con categoria y conteos) ----
-python3 - "$OUT/hallazgos.json" "$URL" <<'PY' "${findings[@]}"
-import json, sys
-out, url = sys.argv[1], sys.argv[2]
+python3 - "$OUT/hallazgos.json" "$URL" "$UXJSON" <<'PY' "${findings[@]}"
+import json, os, sys
+out, url, uxjson = sys.argv[1], sys.argv[2], sys.argv[3]
 order = {"critico":0,"alto":1,"medio":2,"bajo":3,"info":4}
 items = []
-for raw in sys.argv[3:]:
+for raw in sys.argv[4:]:
     cat, sev, titulo, detalle = raw.split("|", 3)
     items.append({"categoria": cat, "severidad": sev, "titulo": titulo, "detalle": detalle})
+
+# Hallazgos del motor de experiencia (ux-audit). Si no corrio, el informe sale
+# igual con los chequeos estaticos; nunca se cae por esto.
+if os.path.exists(uxjson):
+    try:
+        ux = json.load(open(uxjson))
+        for h in ux.get("hallazgos", []):
+            if h.get("titulo") and h.get("detalle"):
+                items.append({k: h[k] for k in ("categoria","severidad","titulo","detalle") if k in h}
+                             | ({"capa": h["capa"]} if h.get("capa") else {})
+                             | ({"evidencia": h["evidencia"][:5]} if h.get("evidencia") else {}))
+    except Exception as e:
+        print(f"[revisar] no pude leer {uxjson}: {e}", file=sys.stderr)
+
 items.sort(key=lambda x: order.get(x["severidad"], 9))
 n_seg = sum(1 for i in items if i["categoria"] == "seguridad")
 n_exp = sum(1 for i in items if i["categoria"] == "experiencia")
