@@ -18,6 +18,7 @@ import { fileURLToPath } from 'node:url';
 
 import { chequearMobile, MIN_INPUT_FONT, MIN_TAP } from '../scripts/ux-audit/checks/mobile.mjs';
 import { chequearEmbudo, detectarAnalitica } from '../scripts/ux-audit/checks/embudo.mjs';
+import { chequearAccesibilidad, esTextoGrande, textosBajoUmbral } from '../scripts/ux-audit/checks/accesibilidad.mjs';
 import { evaluar, resumir, auditar } from '../scripts/ux-audit/index.mjs';
 import { contraste, parseColor } from '../scripts/ux-audit/lib.mjs';
 
@@ -222,6 +223,64 @@ describe('motor', () => {
       assert.ok(h.capa && h.severidad && h.titulo && h.detalle);
       assert.ok(!h.detalle.includes('—'), 'sin rayas largas en la prosa');
     }
+  });
+});
+
+describe('accesibilidad', () => {
+  const texto = (over = {}) => ({
+    sel: 'p', sample: 'un texto de prueba', fontSize: 16, fontWeight: '400',
+    color: 'rgb(0,0,0)', bg: 'rgb(255,255,255)', textAlign: 'left', chars: 18, ...over,
+  });
+
+  test('gris claro sobre blanco se marca como poco contraste', () => {
+    const hs = chequearAccesibilidad(par({ texts: [texto({ color: 'rgb(190,190,190)' })] }));
+    assert.ok(tiene(hs, /cuesta leer/), tituloDe(hs).join('|'));
+  });
+
+  test('texto negro sobre blanco no se marca', () => {
+    assert.ok(!tiene(chequearAccesibilidad(par({ texts: [texto()] })), /cuesta leer/));
+  });
+
+  test('el umbral de texto grande es más permisivo', () => {
+    assert.equal(esTextoGrande(24, '400'), true);
+    assert.equal(esTextoGrande(20, '700'), true);
+    assert.equal(esTextoGrande(20, '400'), false);
+    // 3.4:1 pasa en titular grande y falla en cuerpo
+    const gris = 'rgb(140,140,140)';
+    assert.equal(textosBajoUmbral([texto({ color: gris, fontSize: 32 })]).length, 0);
+    assert.equal(textosBajoUmbral([texto({ color: gris, fontSize: 15 })]).length, 1);
+  });
+
+  test('ignora bloques con muy poco texto para no llenar el informe de ruido', () => {
+    assert.equal(textosBajoUmbral([texto({ color: 'rgb(220,220,220)', sample: 'ok', chars: 2 })]).length, 0);
+  });
+
+  test('outline none sin focus-visible es hallazgo', () => {
+    const css = (t) => ({ styles: { fontFamilies: {}, radii: {}, cssText: t, cssBloqueadas: 0 } });
+    assert.ok(tiene(chequearAccesibilidad(par(css('a{outline:none}'))), /navegar con el teclado/));
+    assert.ok(!tiene(chequearAccesibilidad(par(css('a{outline:none} a:focus-visible{outline:2px solid teal}'))), /navegar con el teclado/));
+  });
+
+  test('imagen sin alt es hallazgo, con alt vacío no', () => {
+    const img = (over) => ({ sel: 'img', src: 'x.png', alt: null, hasAltAttr: false, naturalW: 100, naturalH: 100, rectW: 100, rectH: 100, maxWidth: 'none', loading: '', overflows: false, ...over });
+    assert.ok(tiene(chequearAccesibilidad(par({ images: [img({})] })), /sin descripción/));
+    assert.ok(!tiene(chequearAccesibilidad(par({ images: [img({ hasAltAttr: true, alt: '' })] })), /sin descripción/));
+  });
+
+  test('botón de solo ícono sin aria-label es hallazgo', () => {
+    const hs = chequearAccesibilidad(par({ sinNombre: [{ sel: 'button.x', html: '<i class="fa"></i>' }] }));
+    assert.ok(tiene(hs, /no dicen qué hacen/));
+  });
+
+  test('encabezados que saltan niveles', () => {
+    const h = (tag) => ({ tag, sel: tag, text: 'x', fontSize: 20, fontWeight: '400', textAlign: 'left', top: 0 });
+    assert.ok(tiene(chequearAccesibilidad(par({ headings: [h('h1'), h('h4')] })), /saltan niveles/));
+    assert.ok(!tiene(chequearAccesibilidad(par({ headings: [h('h1'), h('h2'), h('h3')] })), /saltan niveles/));
+  });
+
+  test('página sin h1', () => {
+    const h = (tag) => ({ tag, sel: tag, text: 'x', fontSize: 20, fontWeight: '400', textAlign: 'left', top: 0 });
+    assert.ok(tiene(chequearAccesibilidad(par({ headings: [h('h2')] })), /título principal/));
   });
 });
 

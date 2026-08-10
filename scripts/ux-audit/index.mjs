@@ -16,6 +16,7 @@
 import puppeteer from 'puppeteer-core';
 import { chequearMobile } from './checks/mobile.mjs';
 import { chequearEmbudo } from './checks/embudo.mjs';
+import { chequearAccesibilidad } from './checks/accesibilidad.mjs';
 import { collect } from './probe.mjs';
 import { ordenarPorSeveridad } from './lib.mjs';
 

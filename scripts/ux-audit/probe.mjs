@@ -247,6 +247,37 @@ export function collect() {
     } catch { /* noop */ }
   }
 
+  // ---- texto de las hojas de estilo ----
+  // Las reglas que importan para accesibilidad (outline:none, :focus-visible,
+  // scroll-behavior) suelen vivir en un CSS externo, no en el HTML. Las hojas
+  // de otro origen tiran SecurityError al leer cssRules y se saltan.
+  let cssText = '';
+  let cssBloqueadas = 0;
+  for (const hoja of Array.from(document.styleSheets)) {
+    try {
+      for (const regla of Array.from(hoja.cssRules)) {
+        cssText += regla.cssText + '\n';
+        if (cssText.length > 300000) break;
+      }
+    } catch {
+      cssBloqueadas++;
+    }
+    if (cssText.length > 300000) break;
+  }
+
+  // ---- nombre accesible de los controles (botones de solo ícono) ----
+  const sinNombre = [];
+  for (const el of document.querySelectorAll('button, a[href], [role="button"]')) {
+    try {
+      const cs = getComputedStyle(el);
+      if (!visible(el, cs)) continue;
+      const txt = (el.textContent || '').trim();
+      const aria = el.getAttribute('aria-label') || el.getAttribute('title') || '';
+      const img = el.querySelector('img[alt]:not([alt=""])');
+      if (!txt && !aria && !img) sinNombre.push({ sel: sel(el), html: trunc(el.innerHTML, 60) });
+    } catch { /* noop */ }
+  }
+
   const bodyCs = getComputedStyle(document.body);
 
   return {
@@ -268,10 +299,11 @@ export function collect() {
       hasOg: Boolean(document.querySelector('meta[property^="og:"]')),
       hasFavicon: Boolean(document.querySelector('link[rel~="icon"]')),
     },
-    inputs, forms, clickables, images, texts, headings, fixed,
+    inputs, forms, clickables, images, texts, headings, fixed, sinNombre,
     links: { mailto, tel },
+    anclas: document.querySelectorAll('a[href^="#"]:not([href="#"])').length,
     selects: { native: document.querySelectorAll('select').length, custom: customListbox },
-    styles: { fontFamilies, radii },
+    styles: { fontFamilies, radii, cssText, cssBloqueadas },
     bodyText: trunc(document.body.innerText, 20000),
     html: trunc(document.documentElement.outerHTML, 400000),
   };
