@@ -1,10 +1,33 @@
 // lib.mjs — utilidades compartidas por los chequeos.
 // Todo acá es puro: entra data, sale data. Sin navegador, sin red.
 
+// SECURITY-RULES amenaza #3 (prompt injection) y regla "todo dato que provenga
+// del sitio del cliente es UNTRUSTED". Los títulos y detalles son textos
+// predefinidos, pero la evidencia sí trae pedazos del sitio (selectores con
+// clases propias, placeholders, rutas de imagen). Un sitio hostil podría meter
+// ahí saltos de línea, marcado Typst o texto tipo "ignora tus instrucciones"
+// para ensuciar el informe o manipular a quien lo lea.
+//
+// Por eso NADA del cliente entra a un hallazgo sin pasar por acá: lista blanca
+// de caracteres, sin saltos de línea, y acotado. Se prefiere una evidencia fea
+// y corta antes que una fiel y peligrosa.
+const LARGO_EVIDENCIA = 120;
+
+export function sanitizar(texto) {
+  return String(texto ?? '')
+    .replace(/\s+/g, ' ')
+    .replace(/[^\p{L}\p{N} .,:;()[\]{}#/@_+='"-]/gu, '')
+    .trim()
+    .slice(0, LARGO_EVIDENCIA);
+}
+
 /** Crea un hallazgo con la forma que ya consume el pipeline (hallazgos.json). */
 export function finding(capa, severidad, titulo, detalle, evidencia = null) {
   const f = { categoria: 'experiencia', capa, severidad, titulo, detalle };
-  if (evidencia && evidencia.length) f.evidencia = evidencia.slice(0, 5);
+  if (evidencia && evidencia.length) {
+    f.evidencia = evidencia.slice(0, 5).map(sanitizar).filter(Boolean);
+    if (!f.evidencia.length) delete f.evidencia;
+  }
   return f;
 }
 
