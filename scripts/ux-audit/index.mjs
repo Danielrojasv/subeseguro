@@ -17,6 +17,7 @@ import puppeteer from 'puppeteer-core';
 import { chequearMobile } from './checks/mobile.mjs';
 import { chequearEmbudo } from './checks/embudo.mjs';
 import { chequearAccesibilidad } from './checks/accesibilidad.mjs';
+import { chequearPerformance } from './checks/performance.mjs';
 import { collect } from './probe.mjs';
 import { ordenarPorSeveridad } from './lib.mjs';
 
@@ -25,7 +26,7 @@ export const VIEWPORTS = {
   desktop: { width: 1280, height: 900, deviceScaleFactor: 1 },
 };
 
-const CHEQUEOS = [chequearMobile, chequearEmbudo];
+const CHEQUEOS = [chequearMobile, chequearEmbudo, chequearAccesibilidad, chequearPerformance];
 
 const CHROMIUM_FLAGS = [
   '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',
@@ -57,6 +58,80 @@ export function evaluar(snapshots) {
   return ordenarPorSeveridad(hallazgos);
 }
 
+// Presupuesto de texto de scripts que se guarda para inspección. Acotado a
+// propósito: es contenido del cliente y no queremos cargar 50 MB de bundle.
+const MAX_JS_TEXTO = 1_000_000;
+
+/**
+ * Instrumentación del lado del navegador (red, consola, métricas de pintado).
+ * Va aparte del probe porque son datos que la página no puede darse a sí misma.
+ */
+async function instrumentar(page) {
+  const red = { recursos: [], bytes: 0, peticiones: 0 };
+  const consola = { errores: [], advertencias: [] };
+  const jsTextos = [];
+  let jsBytes = 0;
+  const pendientes = [];
+
+  await page.evaluateOnNewDocument(() => {
+    window.__perf = { lcp: 0, cls: 0 };
+    try {
+      new PerformanceObserver((l) => {
+        for (const e of l.getEntries()) window.__perf.lcp = Math.max(window.__perf.lcp, e.startTime);
+      }).observe({ type: 'largest-contentful-paint', buffered: true });
+      new PerformanceObserver((l) => {
+        for (const e of l.getEntries()) if (!e.hadRecentInput) window.__perf.cls += e.value;
+      }).observe({ type: 'layout-shift', buffered: true });
+    } catch { /* navegador sin soporte, se sigue sin estas dos */ }
+  });
+
+  page.on('response', (res) => {
+    pendientes.push((async () => {
+      try {
+        const headers = res.headers();
+        const tipo = res.request().resourceType();
+        const largo = Number(headers['content-length'] || 0);
+        const recurso = {
+          url: res.url().slice(0, 300),
+          tipo,
+          status: res.status(),
+          bytes: largo,
+          cache: headers['cache-control'] || '',
+          encoding: headers['content-encoding'] || '',
+          contentType: (headers['content-type'] || '').split(';')[0],
+        };
+        if (!largo && (tipo === 'image' || tipo === 'script' || tipo === 'stylesheet')) {
+          try { recurso.bytes = (await res.buffer()).length; } catch { /* sin cuerpo */ }
+        }
+        red.recursos.push(recurso);
+        red.bytes += recurso.bytes || 0;
+        red.peticiones++;
+        if (tipo === 'script' && jsBytes < MAX_JS_TEXTO) {
+          try {
+            const t = await res.text();
+            jsTextos.push(t.slice(0, 200_000));
+            jsBytes += Math.min(t.length, 200_000);
+          } catch { /* binario o ya liberado */ }
+        }
+      } catch { /* respuesta que se fue antes de leerla */ }
+    })());
+  });
+
+  page.on('pageerror', (e) => consola.errores.push(String(e.message).slice(0, 300)));
+  page.on('console', (msg) => {
+    const t = msg.type();
+    if (t === 'error') consola.errores.push(String(msg.text()).slice(0, 300));
+    else if (t === 'warning') consola.advertencias.push(String(msg.text()).slice(0, 300));
+  });
+
+  return {
+    async cerrar() {
+      await Promise.allSettled(pendientes);
+      return { red, consola, jsTexto: jsTextos.join('\n').slice(0, MAX_JS_TEXTO) };
+    },
+  };
+}
+
 /** Recolecta el snapshot de una URL en un viewport dado. */
 async function snapshotDe(browser, url, viewport, { timeout, shot }) {
   const page = await browser.newPage();
@@ -67,11 +142,23 @@ async function snapshotDe(browser, url, viewport, { timeout, shot }) {
         ? 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) SubeSeguroBot/1.0'
         : 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) SubeSeguroBot/1.0'
     );
+    const instr = await instrumentar(page);
     await page.goto(url, { waitUntil: 'networkidle2', timeout });
     // margen para animaciones de entrada y fuentes; sin esto se mide a medio pintar
     await new Promise((r) => setTimeout(r, 800));
     const snap = await page.evaluate(collect);
+    snap.perf = await page.evaluate(() => {
+      const nav = performance.getEntriesByType('navigation')[0] || {};
+      return {
+        lcp: Math.round(window.__perf?.lcp || 0),
+        cls: Math.round((window.__perf?.cls || 0) * 1000) / 1000,
+        domContentLoaded: Math.round(nav.domContentLoadedEventEnd || 0),
+        cargaCompleta: Math.round(nav.loadEventEnd || 0),
+        primerPintado: Math.round((performance.getEntriesByName('first-contentful-paint')[0] || {}).startTime || 0),
+      };
+    }).catch(() => ({}));
     if (shot) await page.screenshot({ path: shot, fullPage: false });
+    Object.assign(snap, await instr.cerrar());
     return snap;
   } finally {
     await page.close().catch(() => {});

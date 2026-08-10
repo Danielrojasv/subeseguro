@@ -19,6 +19,7 @@ import { fileURLToPath } from 'node:url';
 import { chequearMobile, MIN_INPUT_FONT, MIN_TAP } from '../scripts/ux-audit/checks/mobile.mjs';
 import { chequearEmbudo, detectarAnalitica } from '../scripts/ux-audit/checks/embudo.mjs';
 import { chequearAccesibilidad, esTextoGrande, textosBajoUmbral } from '../scripts/ux-audit/checks/accesibilidad.mjs';
+import { chequearPerformance, imagenesSobredimensionadas, LCP_LENTO, PESO_ALTO } from '../scripts/ux-audit/checks/performance.mjs';
 import { evaluar, resumir, auditar } from '../scripts/ux-audit/index.mjs';
 import { contraste, parseColor, sanitizar } from '../scripts/ux-audit/lib.mjs';
 
@@ -215,6 +216,24 @@ describe('motor', () => {
     assert.equal(r.porCapa.mobile, 1);
   });
 
+  // Regresión: la capa de accesibilidad existía, tenía sus tests unitarios en
+  // verde y NO estaba enchufada al motor. Los tests del módulo no bastan; hay
+  // que probar que evaluar() de verdad lo corre.
+  test('evaluar corre TODAS las capas, no solo las primeras', () => {
+    const hs = evaluar(par({
+      inputs: [input({ type: 'url', fontSize: 12 })],
+      texts: [{ sel: 'p', sample: 'texto gris clarito', fontSize: 15, fontWeight: '400', color: 'rgb(200,200,200)', bg: 'rgb(255,255,255)', textAlign: 'left', chars: 18 }],
+      consola: { errores: ['boom'], advertencias: [] },
+      perf: { lcp: 100, cls: 0 },
+      red: { recursos: [], bytes: 1000, peticiones: 1 },
+      jsTexto: '',
+    }));
+    const capas = new Set(hs.map((h) => h.capa));
+    for (const capa of ['mobile', 'formulario', 'accesibilidad', 'performance']) {
+      assert.ok(capas.has(capa), `falta la capa ${capa} en evaluar(): ${[...capas].join(', ')}`);
+    }
+  });
+
   test('todo hallazgo lleva la categoría que consume el pipeline', () => {
     const hs = evaluar(par({ inputs: [input({ type: 'url' })] }));
     assert.ok(hs.length > 0);
@@ -281,6 +300,78 @@ describe('accesibilidad', () => {
   test('página sin h1', () => {
     const h = (tag) => ({ tag, sel: tag, text: 'x', fontSize: 20, fontWeight: '400', textAlign: 'left', top: 0 });
     assert.ok(tiene(chequearAccesibilidad(par({ headings: [h('h2')] })), /título principal/));
+  });
+});
+
+describe('performance y costos', () => {
+  const conRed = (over = {}) => par({
+    perf: { lcp: 900, cls: 0.01, domContentLoaded: 500, cargaCompleta: 900, primerPintado: 400 },
+    red: { recursos: [], bytes: 100000, peticiones: 5 },
+    consola: { errores: [], advertencias: [] },
+    jsTexto: '',
+    ...over,
+  });
+
+  test('errores de consola al cargar son hallazgo alto', () => {
+    const hs = chequearPerformance(conRed({ consola: { errores: ['TypeError: x is not a function'], advertencias: [] } }));
+    const h = hs.find((x) => /tira errores/.test(x.titulo));
+    assert.ok(h);
+    assert.equal(h.severidad, 'alto');
+  });
+
+  test('errores repetidos se cuentan una sola vez', () => {
+    const hs = chequearPerformance(conRed({ consola: { errores: ['mismo', 'mismo', 'mismo'], advertencias: [] } }));
+    assert.equal(hs.find((x) => /tira errores/.test(x.titulo)).evidencia.length, 1);
+  });
+
+  test('LCP sobre el umbral se reporta, bajo el umbral no', () => {
+    assert.ok(tiene(chequearPerformance(conRed({ perf: { lcp: LCP_LENTO + 1, cls: 0 } })), /demora en mostrar/));
+    assert.ok(!tiene(chequearPerformance(conRed({ perf: { lcp: LCP_LENTO - 1, cls: 0 } })), /demora en mostrar/));
+  });
+
+  test('LCP muy lento sube a alto', () => {
+    const hs = chequearPerformance(conRed({ perf: { lcp: 5000, cls: 0 } }));
+    assert.equal(hs.find((x) => /demora en mostrar/.test(x.titulo)).severidad, 'alto');
+  });
+
+  test('peso total sobre el umbral', () => {
+    const hs = chequearPerformance(conRed({
+      red: { recursos: [{ url: 'https://x/app.js', tipo: 'script', status: 200, bytes: 4000000, cache: 'max-age=1' }], bytes: PESO_ALTO + 1, peticiones: 12 },
+    }));
+    assert.ok(tiene(hs, /pesa demasiado/));
+  });
+
+  test('imagen que se descarga al doble de lo que se muestra', () => {
+    const img = { sel: 'img', src: '/a/foto.jpg', alt: '', hasAltAttr: true, naturalW: 2000, naturalH: 1000, rectW: 400, rectH: 200, maxWidth: '100%', loading: '', overflows: false };
+    assert.equal(imagenesSobredimensionadas([img], [{ url: 'https://x/a/foto.jpg', tipo: 'image', bytes: 800000 }]).length, 1);
+    const ok = { ...img, naturalW: 500 };
+    assert.equal(imagenesSobredimensionadas([ok], []).length, 0);
+  });
+
+  test('setInterval rápido se reporta como cuenta que crece sola', () => {
+    const hs = chequearPerformance(conRed({ jsTexto: 'setInterval(cargarDatos, 2000)' }));
+    const h = hs.find((x) => /se repite solo/.test(x.titulo));
+    assert.ok(h);
+    assert.match(h.detalle, /1800 llamadas por hora/);
+  });
+
+  test('un setInterval lento (sobre 10s) no se reporta', () => {
+    assert.ok(!tiene(chequearPerformance(conRed({ jsTexto: 'setInterval(x, 60000)' })), /se repite solo/));
+  });
+
+  test('llamada a API de IA desde el navegador es hallazgo alto', () => {
+    const hs = chequearPerformance(conRed({ jsTexto: 'fetch("https://api.openai.com/v1/chat/completions")' }));
+    assert.equal(hs.find((x) => /API de IA desde el navegador/.test(x.titulo)).severidad, 'alto');
+  });
+
+  test('recursos estáticos sin caché', () => {
+    const rec = (i) => ({ url: `https://x/${i}.js`, tipo: 'script', status: 200, bytes: 1000, cache: '' });
+    const hs = chequearPerformance(conRed({ red: { recursos: [1, 2, 3, 4, 5, 6].map(rec), bytes: 6000, peticiones: 6 } }));
+    assert.ok(tiene(hs, /vuelven a descargar/));
+  });
+
+  test('una app rápida y sana no genera hallazgos', () => {
+    assert.deepEqual(tituloDe(chequearPerformance(conRed())), []);
   });
 });
 

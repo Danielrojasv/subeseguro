@@ -15,7 +15,10 @@
   <!-- medición instalada: sin esto no se puede diagnosticar el embudo -->
   <script data-goatcounter="https://ejemplo.goatcounter.com/count" async src="data:text/javascript,"></script>
   <style>
-    :root { --coral: #E75736; --ink: #241F1A; --line: #ECE2D1; }
+    /* Ojo con el coral: #E75736 con texto blanco da 3.61:1 y NO pasa AA para
+       texto de tamaño normal (pide 4.5:1). Se usa el tono oscuro #CC4626, que
+       da 4.7:1. El coral claro solo sirve para texto grande. */
+    :root { --coral: #CC4626; --ink: #241F1A; --line: #ECE2D1; }
     * { box-sizing: border-box; }
     body { margin: 0; font-family: system-ui, sans-serif; color: var(--ink); }
     .wrap { max-width: 960px; margin: 0 auto; padding: 0 20px; }
