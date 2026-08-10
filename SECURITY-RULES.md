@@ -14,6 +14,7 @@ en el server. Modelo de amenazas y mitigaciones. **Leer antes de tocar el motor 
 | 5 | **Ejecución de código de repos ajenos** | El repo se clona en dir temporal, se corre solo gitleaks (lectura), NUNCA se ejecuta su código; se borra al terminar. |
 | 6 | **Shell injection vía URL** | La URL va siempre entre comillas a curl; a Python/subprocess como argv (sin shell); el SLUG del path filtra a `[A-Za-z0-9-]`. El pipeline pasa la URL como argumento de lista (`subprocess.run([...])`), sin shell. |
 | 7 | **Fuga de datos de clientes** | `informes/` y `pipeline/.env` y `scans.db` gitignoreados. Credenciales solo en `.env` (chmod 600). |
+| 8 | **Verificación ACTIVA de base de datos** — `verificar-datos.mjs` consulta el Supabase/Firebase del sitio, o sea deja de ser pasivo | Cuatro candados, ninguno opcional: (1) **apagado por defecto**, solo corre con `verificarDatos:true`, hoy solo desde la CLI `--verificar-datos` para revisiones internas; el camino público (`revisar.sh`, pipeline) NUNCA lo activa. (2) **Nada adivinado**: solo la URL+clave anon que el propio sitio ya publica; nunca proyectos/tablas/claves inventadas. (3) **Solo lectura, acotado**: GET `limit=1`, tope 5 consultas, timeout 8s, guard SSRF (host debe resolver a IP pública), `redirect: error`. Nunca escribe ni borra. Si lo expuesto es `service_role`, NO se usa: se reporta crítico sin tocar la base. (4) **No se guarda nada**: la respuesta se mira para saber si vino vacía o con datos y se bota; al informe solo va el veredicto + nombre de tabla (sanitizado). Pendiente para el camino público: check de permiso explícito del dueño en el formulario. |
 
 ## Reglas al modificar
 
@@ -25,3 +26,6 @@ en el server. Modelo de amenazas y mitigaciones. **Leer antes de tocar el motor 
   puede cambiar (redirects a hosts nuevos). Hoy acotamos con `--max-redirs 5`.
 - Para producción a escala: el clon+scan de repos ajenos va en VPS aislado, no en el server
   de casa (ver memoria `project-auditorias-vibecoding-idea`).
+- La verificación activa de base de datos (`--verificar-datos`) es SOLO para sitios propios,
+  revisiones internas, o sitios de terceros con permiso explícito. NO enchufarla al camino
+  público hasta que el formulario tenga el check de autorización del dueño.

@@ -16,9 +16,10 @@ const ORDEN = { critico: 0, alto: 1, medio: 2, bajo: 3, info: 4 };
 const ETIQUETA = { critico: 'CRÍTICO', alto: 'ALTO', medio: 'MEDIO', bajo: 'BAJO', info: 'NOTA' };
 
 function parseArgs(argv) {
-  const opts = { url: null, json: false, out: null, shotsDir: null, failOn: null, timeout: 30000, hoja: null };
+  const opts = { url: null, json: false, out: null, shotsDir: null, failOn: null, timeout: 30000, hoja: null, verificarDatos: false };
   for (const a of argv) {
     if (a === '--json') opts.json = true;
+    else if (a === '--verificar-datos') opts.verificarDatos = true;
     else if (a.startsWith('--out=')) opts.out = a.slice(6);
     else if (a.startsWith('--hoja=')) opts.hoja = a.slice(7);
     else if (a.startsWith('--shots=')) opts.shotsDir = a.slice(8);
@@ -37,7 +38,11 @@ function uso() {
   --hoja=archivo  escribe la hoja de la revisión senior (lo que no se automatiza)
   --shots=dir     guarda screen-mobile.png y screen-desktop.png en ese directorio
   --fail-on=sev   sale con código 1 si hay algún hallazgo de esa severidad o peor
-                  (critico, alto, medio, bajo)`);
+                  (critico, alto, medio, bajo)
+  --verificar-datos  ACTIVO: consulta la base (Supabase/Firebase) con la clave
+                  pública del propio sitio para ver si está abierta. Solo para
+                  revisiones internas y sitios propios o con permiso del dueño.
+                  Ver los candados en scripts/ux-audit/verificar-datos.mjs.`);
 }
 
 function imprimir(res) {
@@ -69,7 +74,7 @@ if (opts.shotsDir) mkdirSync(opts.shotsDir, { recursive: true });
 
 let res;
 try {
-  res = await auditar(opts.url, { timeout: opts.timeout, shotsDir: opts.shotsDir });
+  res = await auditar(opts.url, { timeout: opts.timeout, shotsDir: opts.shotsDir, verificarDatos: opts.verificarDatos });
 } catch (e) {
   console.error(`[ux-audit] no se pudo auditar ${opts.url}: ${e.message}`);
   process.exit(3);

@@ -19,6 +19,8 @@ import { chequearEmbudo } from './checks/embudo.mjs';
 import { chequearAccesibilidad } from './checks/accesibilidad.mjs';
 import { chequearPerformance } from './checks/performance.mjs';
 import { chequearJerarquia, chequearConfianza } from './checks/jerarquia.mjs';
+import { chequearDatos } from './checks/datos.mjs';
+import { verificarDatos } from './verificar-datos.mjs';
 import { collect } from './probe.mjs';
 import { ordenarPorSeveridad } from './lib.mjs';
 
@@ -221,7 +223,27 @@ export async function auditar(url, opts = {}) {
     if (!snapshots.desktop) snapshots.desktop = snapshots.mobile;
 
     const hallazgos = evaluar(snapshots);
-    return { url, ok: true, errores, hallazgos, resumen: resumir(hallazgos), snapshots };
+
+    // Verificación ACTIVA de base de datos. Apagada por defecto: solo corre con
+    // verificarDatos:true, que hoy solo llega desde la CLI (--verificar-datos)
+    // para revisiones internas. El camino público no la activa. Ver los candados
+    // en verificar-datos.mjs y la fila correspondiente de SECURITY-RULES.
+    if (opts.verificarDatos) {
+      try {
+        const texto = (snapshots.desktop?.html || '') + '\n' + (snapshots.desktop?.jsTexto || '');
+        const verificacion = await verificarDatos(texto);
+        hallazgos.push(...chequearDatos(verificacion));
+      } catch (e) {
+        hallazgos.push({
+          categoria: 'experiencia', capa: 'datos', severidad: 'info',
+          titulo: 'No se pudo verificar la base de datos',
+          detalle: `La verificación activa falló y se omitió; el resto del informe es válido. (${e.message})`,
+        });
+      }
+    }
+
+    const ordenados = ordenarPorSeveridad(hallazgos);
+    return { url, ok: true, errores, hallazgos: ordenados, resumen: resumir(ordenados), snapshots };
   } finally {
     await browser.close().catch(() => {});
   }

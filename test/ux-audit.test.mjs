@@ -22,6 +22,12 @@ import { chequearAccesibilidad, esTextoGrande, textosBajoUmbral } from '../scrip
 import { chequearPerformance, imagenesSobredimensionadas, LCP_LENTO, PESO_ALTO } from '../scripts/ux-audit/checks/performance.mjs';
 import { chequearJerarquia, chequearConfianza } from '../scripts/ux-audit/checks/jerarquia.mjs';
 import { generarHoja, ITEMS_CRITERIO } from '../scripts/ux-audit/hoja.mjs';
+import { chequearDatos } from '../scripts/ux-audit/checks/datos.mjs';
+import { extraerCredenciales, rolDeClave } from '../scripts/ux-audit/verificar-datos.mjs';
+
+// JWT de juguete (firma inválida, no importa: solo se lee el payload). El
+// segundo segmento es base64url de {"role":"..."}.
+const jwtCon = (rol) => 'eyJhbGciOiJIUzI1NiJ9.' + Buffer.from(JSON.stringify({ role: rol })).toString('base64url') + '.sig_de_mentira_zzzzzzzzzz';
 import { evaluar, resumir, auditar } from '../scripts/ux-audit/index.mjs';
 import { contraste, parseColor, sanitizar } from '../scripts/ux-audit/lib.mjs';
 
@@ -460,6 +466,74 @@ describe('hoja de la revisión senior', () => {
   });
 });
 
+describe('verificación de base de datos (activa, con candados)', () => {
+  test('rolDeClave lee el rol del JWT sin validar firma', () => {
+    assert.equal(rolDeClave(jwtCon('anon')), 'anon');
+    assert.equal(rolDeClave(jwtCon('service_role')), 'service_role');
+    assert.equal(rolDeClave('basura'), null);
+  });
+
+  test('extrae la url y la clave anon de Supabase que el sitio publica', () => {
+    const html = `<script>const c = createClient("https://abcdefgh.supabase.co", "${jwtCon('anon')}")</script>`;
+    const cred = extraerCredenciales(html);
+    assert.equal(cred.supabase.url, 'https://abcdefgh.supabase.co');
+    assert.ok(cred.supabase.anon);
+    assert.equal(cred.claveDeServicio, false);
+  });
+
+  test('marca la clave de servicio expuesta como bandera roja', () => {
+    const cred = extraerCredenciales(`key="${jwtCon('service_role')}" url=https://x1234567.supabase.co`);
+    assert.equal(cred.claveDeServicio, true);
+  });
+
+  test('Supabase sin los dos datos queda incompleto, no se prueba a medias', () => {
+    const cred = extraerCredenciales('https://soloxurl.supabase.co sin clave');
+    assert.ok(cred.supabase.incompleto);
+  });
+
+  test('detecta la URL de Firebase Realtime Database', () => {
+    const cred = extraerCredenciales('databaseURL: "https://mi-proyecto.firebaseio.com"');
+    assert.ok(cred.firebase);
+  });
+
+  test('sin nada de base de datos, no hay credenciales', () => {
+    const cred = extraerCredenciales('<p>una página cualquiera</p>');
+    assert.equal(cred.supabase, null);
+    assert.equal(cred.firebase, null);
+  });
+
+  test('chequearDatos: clave de servicio es crítico sin tocar la base', () => {
+    const hs = chequearDatos({ corrio: true, claveDeServicio: true });
+    assert.equal(hs.find((h) => /clave de administrador/.test(h.titulo)).severidad, 'critico');
+  });
+
+  test('chequearDatos: tabla abierta es crítico', () => {
+    const hs = chequearDatos({ corrio: true, supabase: { tablasVisibles: 3, tablasAbiertas: ['usuarios'] } });
+    const h = hs.find((x) => /leer tu base de datos/.test(x.titulo));
+    assert.equal(h.severidad, 'critico');
+    assert.deepEqual(h.evidencia, ['usuarios']);
+  });
+
+  test('chequearDatos: base que rechaza el acceso es buena señal', () => {
+    const hs = chequearDatos({ corrio: true, supabase: { tablasVisibles: 3, tablasAbiertas: [] } });
+    assert.ok(tiene(hs, /rechazó el acceso/));
+    assert.equal(hs[0].severidad, 'info');
+  });
+
+  test('chequearDatos: Firebase abierto es crítico', () => {
+    const hs = chequearDatos({ corrio: true, firebase: { url: 'https://x.firebaseio.com', abierta: true } });
+    assert.equal(hs.find((h) => /Firebase está abierta/.test(h.titulo)).severidad, 'critico');
+  });
+
+  test('el chequeo NUNCA vuelca datos del cliente, solo veredictos', () => {
+    // Aunque la tabla se llame como un intento de inyección, sale sanitizada.
+    const hs = chequearDatos({ corrio: true, supabase: { tablasVisibles: 1, tablasAbiertas: ['users\n<script>'] } });
+    const ev = hs.find((h) => /leer tu base/.test(h.titulo)).evidencia.join('');
+    assert.ok(!ev.includes('<script>'));
+    assert.ok(!ev.includes('\n'));
+  });
+});
+
 describe('sanitización de lo que viene del sitio del cliente', () => {
   test('quita saltos de línea y colapsa espacios', () => {
     assert.equal(sanitizar('hola\n\nmundo   raro'), 'hola mundo raro');
@@ -560,6 +634,19 @@ describe('integración con chromium', { skip: hayChromium ? false : 'sin chromiu
       const res = await auditar(`${base}/limpia.html`, { timeout: 20000 });
       assert.ok(res.ok, JSON.stringify(res.errores));
       assert.deepEqual(tituloDe(res.hallazgos), [], 'la página de referencia no debe tener hallazgos');
+    } finally {
+      server.close();
+    }
+  });
+
+  test('la verificación de base de datos está APAGADA por defecto', async () => {
+    await levantar();
+    try {
+      // rota.html no tiene credenciales, pero probamos el contrato: sin el flag,
+      // jamás aparece un hallazgo de la capa datos.
+      const res = await auditar(`${base}/rota.html`, { timeout: 20000 });
+      assert.ok(res.ok, JSON.stringify(res.errores));
+      assert.ok(!res.hallazgos.some((h) => h.capa === 'datos'), 'no debe correr sin verificarDatos:true');
     } finally {
       server.close();
     }

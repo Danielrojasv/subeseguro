@@ -67,6 +67,16 @@ Lo que necesita ojo humano no se automatiza ni se inventa: sale en
 `hoja-revision.md` (`--hoja=`), la hoja de la pasada senior con los 18 ítems de
 criterio y un resumen de lo que el motor ya cubrió.
 
+**Verificación activa de base de datos (`--verificar-datos`, apagada por defecto).**
+La capa `datos` deja de solo observar y le consulta al Supabase/Firebase del sitio
+—con la clave pública que el propio sitio ya publica— si quedó sin reglas de acceso,
+que es la fuga número uno en apps hechas con IA. Como cruza la línea de "solo pasivo",
+tiene cuatro candados (apagado por defecto, nada adivinado, solo lectura acotada,
+no guarda nada) descritos en `scripts/ux-audit/verificar-datos.mjs` y en
+`SECURITY-RULES.md` #8. **Solo para revisiones internas y sitios propios o con permiso
+del dueño**; el camino público (`revisar.sh`, pipeline) NO la activa hasta que el
+formulario tenga el check de autorización. Uso: `pnpm ux <url> --verificar-datos`.
+
 Está construido como herramienta suelta a propósito, porque tiene tres usos:
 
 ```bash
