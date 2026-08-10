@@ -20,6 +20,8 @@ import { chequearMobile, MIN_INPUT_FONT, MIN_TAP } from '../scripts/ux-audit/che
 import { chequearEmbudo, detectarAnalitica } from '../scripts/ux-audit/checks/embudo.mjs';
 import { chequearAccesibilidad, esTextoGrande, textosBajoUmbral } from '../scripts/ux-audit/checks/accesibilidad.mjs';
 import { chequearPerformance, imagenesSobredimensionadas, LCP_LENTO, PESO_ALTO } from '../scripts/ux-audit/checks/performance.mjs';
+import { chequearJerarquia, chequearConfianza } from '../scripts/ux-audit/checks/jerarquia.mjs';
+import { generarHoja, ITEMS_CRITERIO } from '../scripts/ux-audit/hoja.mjs';
 import { evaluar, resumir, auditar } from '../scripts/ux-audit/index.mjs';
 import { contraste, parseColor, sanitizar } from '../scripts/ux-audit/lib.mjs';
 
@@ -229,7 +231,7 @@ describe('motor', () => {
       jsTexto: '',
     }));
     const capas = new Set(hs.map((h) => h.capa));
-    for (const capa of ['mobile', 'formulario', 'accesibilidad', 'performance']) {
+    for (const capa of ['mobile', 'formulario', 'accesibilidad', 'performance', 'confianza']) {
       assert.ok(capas.has(capa), `falta la capa ${capa} en evaluar(): ${[...capas].join(', ')}`);
     }
   });
@@ -372,6 +374,89 @@ describe('performance y costos', () => {
 
   test('una app rápida y sana no genera hallazgos', () => {
     assert.deepEqual(tituloDe(chequearPerformance(conRed())), []);
+  });
+});
+
+describe('jerarquía y confianza', () => {
+  const link = (over = {}) => ({ sel: 'a', texto: 'Precios', fontSize: 16, fontWeight: '400', color: 'rgb(0,0,0)', esBoton: false, ...over });
+
+  test('marca del mismo tamaño que los enlaces del menú', () => {
+    const hs = chequearJerarquia(par({
+      marca: { sel: 'a.marca', texto: 'MiApp', fontSize: 16, fontWeight: '400', color: 'rgb(0,0,0)', tieneImagen: false },
+      navLinks: [link(), link({ texto: 'Blog' })],
+    }));
+    assert.ok(tiene(hs, /compite con los enlaces/));
+  });
+
+  test('marca más grande que el menú no es hallazgo', () => {
+    const hs = chequearJerarquia(par({
+      marca: { sel: 'a.marca', texto: 'MiApp', fontSize: 22, fontWeight: '400', color: 'rgb(0,0,0)', tieneImagen: false },
+      navLinks: [link(), link({ texto: 'Blog' })],
+    }));
+    assert.ok(!tiene(hs, /compite con los enlaces/));
+  });
+
+  test('una marca con logo no se juzga por tamaño de letra', () => {
+    const hs = chequearJerarquia(par({
+      marca: { sel: 'a.marca', texto: 'MiApp', fontSize: 12, fontWeight: '400', color: 'rgb(0,0,0)', tieneImagen: true },
+      navLinks: [link(), link({ texto: 'Blog' })],
+    }));
+    assert.ok(!tiene(hs, /compite con los enlaces/));
+  });
+
+  test('escala tipográfica plana', () => {
+    const t = (fs) => ({ sel: 'p', sample: 'x'.repeat(60), fontSize: fs, fontWeight: '400', color: 'rgb(0,0,0)', bg: 'rgb(255,255,255)', textAlign: 'left', chars: 60 });
+    const headings = [{ tag: 'h1', sel: 'h1', text: 'Hola', fontSize: 20, fontWeight: '400', textAlign: 'left', top: 0 }];
+    assert.ok(tiene(chequearJerarquia(par({ headings, texts: [t(16), t(16), t(16)] })), /no forman una escala/));
+    const grande = [{ ...headings[0], fontSize: 44 }];
+    assert.ok(!tiene(chequearJerarquia(par({ headings: grande, texts: [t(16), t(16), t(16)] })), /no forman una escala/));
+  });
+
+  test('tres o más colores de acento en botones', () => {
+    const b = (bg) => ({ ...boton(), bg, sel: `a${bg}` });
+    const hs = chequearJerarquia(par({ clickables: [b('rgb(231,87,54)'), b('rgb(92,138,134)'), b('rgb(61,0,29)')] }));
+    assert.ok(tiene(hs, /varios colores distintos/));
+  });
+
+  test('dos colores de acento son aceptables', () => {
+    const b = (bg) => ({ ...boton(), bg, sel: `a${bg}` });
+    assert.ok(!tiene(chequearJerarquia(par({ clickables: [b('rgb(231,87,54)'), b('rgb(92,138,134)')] })), /varios colores/));
+  });
+
+  test('párrafos largos centrados', () => {
+    const t = (align, chars) => ({ sel: 'p', sample: 'x'.repeat(60), fontSize: 16, fontWeight: '400', color: 'rgb(0,0,0)', bg: 'rgb(255,255,255)', textAlign: align, chars });
+    assert.ok(tiene(chequearJerarquia(par({ texts: [t('center', 200), t('center', 150), t('center', 300)] })), /centrados/));
+    assert.ok(!tiene(chequearJerarquia(par({ texts: [t('center', 30), t('center', 40), t('center', 20)] })), /centrados/));
+  });
+
+  test('pide correo sin decir qué hace con él', () => {
+    const conCorreo = { inputs: [input({ type: 'email', name: 'email' })] };
+    assert.ok(tiene(chequearConfianza(par(conCorreo)), /sin decir qué haces/));
+    assert.ok(!tiene(chequearConfianza(par({ ...conCorreo, bodyText: 'Tu correo se usa solo para el informe, nada de spam.' })), /sin decir qué haces/));
+  });
+
+  test('nadie firma la página', () => {
+    assert.ok(tiene(chequearConfianza(par()), /quién está detrás/));
+    assert.ok(!tiene(chequearConfianza(par({ paginas: { nosotros: true, contacto: false, privacidad: false, terminos: false } })), /quién está detrás/));
+  });
+});
+
+describe('hoja de la revisión senior', () => {
+  test('lista los ítems de criterio y no se queda vacía', () => {
+    const hoja = generarHoja('https://x.cl', []);
+    assert.ok(ITEMS_CRITERIO >= 15, `solo ${ITEMS_CRITERIO} ítems de criterio`);
+    assert.equal((hoja.match(/- \[ \]/g) || []).length, ITEMS_CRITERIO + 2); // + los dos del cierre
+    assert.match(hoja, /Toda la revisión depende de esta pasada/);
+  });
+
+  test('resume lo que el motor ya cubrió para no repetirlo a mano', () => {
+    const hoja = generarHoja('https://x.cl', [
+      { capa: 'mobile', severidad: 'alto', titulo: 'Se corre para el lado' },
+      { capa: 'formulario', severidad: 'medio', titulo: 'Sin analítica' },
+    ]);
+    assert.match(hoja, /\*\*mobile\*\*/);
+    assert.match(hoja, /\[ALTO\] Se corre para el lado/);
+    assert.ok(!/Toda la revisión depende/.test(hoja));
   });
 });
 

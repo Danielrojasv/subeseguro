@@ -18,6 +18,7 @@ import { chequearMobile } from './checks/mobile.mjs';
 import { chequearEmbudo } from './checks/embudo.mjs';
 import { chequearAccesibilidad } from './checks/accesibilidad.mjs';
 import { chequearPerformance } from './checks/performance.mjs';
+import { chequearJerarquia, chequearConfianza } from './checks/jerarquia.mjs';
 import { collect } from './probe.mjs';
 import { ordenarPorSeveridad } from './lib.mjs';
 
@@ -26,7 +27,17 @@ export const VIEWPORTS = {
   desktop: { width: 1280, height: 900, deviceScaleFactor: 1 },
 };
 
-const CHEQUEOS = [chequearMobile, chequearEmbudo, chequearAccesibilidad, chequearPerformance];
+// Toda capa nueva se agrega acá. El test "evaluar corre TODAS las capas" existe
+// porque una vez se importó un chequeo y se olvidó esta línea, con los tests
+// unitarios en verde y el motor sin correrlo nunca.
+const CHEQUEOS = [
+  chequearMobile,
+  chequearEmbudo,
+  chequearAccesibilidad,
+  chequearPerformance,
+  chequearJerarquia,
+  chequearConfianza,
+];
 
 const CHROMIUM_FLAGS = [
   '--no-sandbox', '--disable-gpu', '--disable-dev-shm-usage',

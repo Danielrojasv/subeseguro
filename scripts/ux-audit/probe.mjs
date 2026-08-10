@@ -278,6 +278,46 @@ export function collect() {
     } catch { /* noop */ }
   }
 
+  // ---- cabecera: marca contra navegación ----
+  // La regla es que la marca pese más que los links. Cuando compiten al mismo
+  // tamaño y color, no domina nada y la página se siente de plantilla.
+  let marca = null;
+  const navLinks = [];
+  const cabecera = document.querySelector('header, [role="banner"]');
+  if (cabecera) {
+    const links = Array.from(cabecera.querySelectorAll('a[href]'));
+    const primero = links[0];
+    if (primero) {
+      const cs = getComputedStyle(primero);
+      marca = {
+        sel: sel(primero), texto: trunc(primero.textContent, 40),
+        fontSize: px(cs.fontSize), fontWeight: cs.fontWeight, color: cs.color,
+        tieneImagen: Boolean(primero.querySelector('img, svg')),
+      };
+    }
+    const nav = cabecera.querySelector('nav') || cabecera;
+    for (const a of Array.from(nav.querySelectorAll('a[href]')).slice(0, 12)) {
+      if (a === primero) continue;
+      const cs = getComputedStyle(a);
+      if (!visible(a, cs)) continue;
+      navLinks.push({
+        sel: sel(a), texto: trunc(a.textContent, 30),
+        fontSize: px(cs.fontSize), fontWeight: cs.fontWeight, color: cs.color,
+        esBoton: cs.backgroundColor !== 'transparent' && !/rgba\(\s*\d+,\s*\d+,\s*\d+,\s*0\s*\)/.test(cs.backgroundColor),
+      });
+    }
+  }
+
+  // ---- páginas de respaldo (quién está detrás, qué pasa con mis datos) ----
+  const paginas = { nosotros: false, contacto: false, privacidad: false, terminos: false };
+  for (const a of document.querySelectorAll('a[href]')) {
+    const t = ((a.getAttribute('href') || '') + ' ' + (a.textContent || '')).toLowerCase();
+    if (/about|nosotros|qui[eé]nes|equipo|team/.test(t)) paginas.nosotros = true;
+    if (/contacto|contact|escr[ií]benos/.test(t)) paginas.contacto = true;
+    if (/privacidad|privacy/.test(t)) paginas.privacidad = true;
+    if (/t[eé]rminos|terms|condiciones/.test(t)) paginas.terminos = true;
+  }
+
   const bodyCs = getComputedStyle(document.body);
 
   return {
@@ -300,6 +340,7 @@ export function collect() {
       hasFavicon: Boolean(document.querySelector('link[rel~="icon"]')),
     },
     inputs, forms, clickables, images, texts, headings, fixed, sinNombre,
+    marca, navLinks, paginas,
     links: { mailto, tel },
     anclas: document.querySelectorAll('a[href^="#"]:not([href="#"])').length,
     selects: { native: document.querySelectorAll('select').length, custom: customListbox },

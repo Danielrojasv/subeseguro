@@ -51,9 +51,21 @@ typst compile informe/reporte-ejemplo.typ   # regenerar el PDF (requiere fuente 
 
 ## Motor de experiencia (`scripts/ux-audit/`)
 
-Abre la página en chromium y **mide** en vez de adivinar: scroll horizontal, tamaño real
-de los campos, targets táctiles, teclados por campo, labels, validación que bloquea envíos,
-medición instalada. De paso deja las capturas mobile y desktop que consume el informe.
+Abre la página en chromium y **mide** en vez de adivinar. De paso deja las capturas
+mobile y desktop que consume el informe. Seis capas:
+
+| Capa | Qué mide |
+|------|----------|
+| `mobile` | scroll horizontal, h1 que no escala, inputs bajo 16px (zoom de iOS), targets bajo 44px, teclado por campo, imágenes que desbordan, dropdowns a mano, theme-color, safe areas, mailto que muere en webviews |
+| `formulario` | campos sin label, `type="url"` que bloquea envíos en silencio, patterns sin explicación, opcionales sin marcar, ausencia de analítica, sin acción en el primer pantallazo, precio escondido |
+| `accesibilidad` | contraste WCAG por bloque con el umbral correcto según tamaño y peso, foco invisible, alt, botones sin nombre accesible, anclas sin scroll suave, encabezados que saltan niveles |
+| `performance` | errores de consola al cargar, LCP, peso transferido, imágenes sobredimensionadas, CLS, estáticos sin caché, `setInterval` de pocos segundos, APIs de IA llamadas desde el navegador |
+| `jerarquia` | marca que compite con la nav, escala tipográfica plana, exceso de colores de acento, párrafos largos centrados |
+| `confianza` | pide correo sin decir para qué, nadie firma la página |
+
+Lo que necesita ojo humano no se automatiza ni se inventa: sale en
+`hoja-revision.md` (`--hoja=`), la hoja de la pasada senior con los 18 ítems de
+criterio y un resumen de lo que el motor ya cubrió.
 
 Está construido como herramienta suelta a propósito, porque tiene tres usos:
 
@@ -65,7 +77,7 @@ pnpm ux http://localhost:8080                  # 2. mientras construyes un sitio
 pnpm ux http://localhost:8080 --fail-on=alto   # 3. puerta de CI, sale 1 si hay algo grave
 ```
 
-Opciones: `--json`, `--out=archivo.json`, `--shots=dir`, `--timeout=ms`.
+Opciones: `--json`, `--out=archivo.json`, `--hoja=archivo.md`, `--shots=dir`, `--timeout=ms`.
 
 Arquitectura, y la razón de que sea así:
 

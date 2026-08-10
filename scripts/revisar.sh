@@ -183,7 +183,7 @@ UXJSON="$OUT/ux.json"
 rm -f "$UXJSON"
 if command -v node >/dev/null 2>&1 && [[ -d "$ROOT/node_modules/puppeteer-core" ]]; then
   timeout 180 node "$ROOT/scripts/ux-audit/cli.mjs" "$URL" \
-      --out="$UXJSON" --shots="$OUT" --timeout=30000 >/dev/null 2>&1 \
+      --out="$UXJSON" --shots="$OUT" --hoja="$OUT/hoja-revision.md" --timeout=30000 >/dev/null 2>&1 \
     || echo "[revisar] ux-audit no completo la pasada; sigo con el resto"
 else
   echo "[revisar] ux-audit no disponible (falta node o pnpm install); solo capturas"
