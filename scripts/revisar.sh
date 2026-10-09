@@ -1,16 +1,15 @@
 #!/usr/bin/env bash
-# revisar.sh — motor de la revisión gratuita de SubeSeguro (tier automático supervisado).
-# Corre chequeos DETERMINISTAS y pasivos sobre una URL pública (y opcionalmente un repo),
-# emite un JSON de hallazgos que alimenta la plantilla Typst del informe top-3.
+# revisar.sh — puerta de SubeSeguro al motor master-audit (/opt/master-audit).
+# El motor (chequeos pasivos de seguridad, experiencia, accesibilidad, jerarquía,
+# performance; capturas; hoja de revisión) vive en master-audit. Acá solo se decide
+# dónde dejar el informe, se firma el user agent y se persiste en el SQLite del producto.
 #
 # Uso:  scripts/revisar.sh <url> [repo_git_url]
-# Salida: informes/<slug>/ con hallazgos.json, screenshots y (si se pide) el PDF.
+# Salida: informes/<slug>/ con hallazgos.json, ux.json, screenshots y hoja-revision.md.
+# Códigos: 0 ok · 3 URL no responde · 4 red interna (SSRF) · 2 uso · 5 motor ausente.
 #
-# Principios (ver ../README.md y memoria feedback_security_rules_files):
-#   - Solo chequeos PASIVOS: GET a la URL, headers, archivos que ya son públicos.
-#     Nada de fuerza bruta ni pruebas intrusivas (eso sería pentest, no lo somos).
-#   - El repo se clona SIEMPRE en un dir temporal y se borra; nunca se ejecuta su código.
-#     (Para producción con repos de desconocidos: correr en VPS aislado, no en el server.)
+# Principios heredados del motor (ver /opt/master-audit/SECURITY-RULES.md): solo chequeos
+# PASIVOS; el repo se clona en temporal y nunca se ejecuta; nada de IA sobre el contenido.
 set -uo pipefail
 
 URL="${1:-}"
@@ -19,235 +18,26 @@ if [[ -z "$URL" ]]; then echo "uso: revisar.sh <url> [repo_git_url]" >&2; exit 2
 [[ "$URL" =~ ^https?:// ]] || URL="https://$URL"
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENGINE="${MASTER_AUDIT_BIN:-/opt/master-audit/bin/master-audit}"
+if [[ ! -x "$ENGINE" ]]; then
+  echo "[revisar] no encuentro el motor master-audit en $ENGINE (MASTER_AUDIT_BIN para cambiarlo)" >&2
+  exit 5
+fi
+
 SLUG="$(echo "$URL" | sed -E 's#^https?://##; s#[^a-zA-Z0-9]+#-#g; s#-+$##' | cut -c1-60)"
 OUT="$ROOT/informes/$SLUG"
 mkdir -p "$OUT"
-# curl endurecido: timeout, tope de descarga (anti sitio gigante) y SIN seguir redirects
-# a hosts que no revalidemos (--max-redirs acotado; el guard SSRF se aplica por request).
-CURL=(curl -sS -L --max-time 25 --max-redirs 5 --max-filesize 10000000
-      -A "SubeSeguroBot/1.0 (revision pre-lanzamiento)")
 
-# ---- Guard SSRF: rechazar URLs que apunten a la red interna ----
-# Sin esto, alguien podría usar SubeSeguro para escanear el localhost/LAN/Tailscale
-# del server. Permitir localhost solo si SUBESEGURO_ALLOW_LOCAL=1 (para pruebas propias).
-ssrf_ok() {
-  python3 - "$1" <<'PY'
-import ipaddress, socket, sys, os
-from urllib.parse import urlparse
-u = urlparse(sys.argv[1])
-host = u.hostname or ""
-allow_local = os.environ.get("SUBESEGURO_ALLOW_LOCAL") == "1"
-try:
-    infos = socket.getaddrinfo(host, None)
-except Exception:
-    sys.exit(0)  # no resuelve: lo maneja el chequeo de accesibilidad (000), no es SSRF
-for fam, _, _, _, sa in infos:
-    ip = ipaddress.ip_address(sa[0])
-    blocked = (ip.is_private or ip.is_loopback or ip.is_link_local
-               or ip.is_reserved or ip.is_multicast
-               or ip in ipaddress.ip_network("100.64.0.0/10"))  # CGNAT/Tailscale
-    if blocked and not allow_local:
-        sys.exit(7)
-sys.exit(0)
-PY
-}
-if ! ssrf_ok "$URL"; then
-  python3 - "$URL" "$OUT/hallazgos.json" <<'PY'
-import json, sys
-json.dump({"url": sys.argv[1], "accesible": False, "hallazgos": [{
-    "categoria": "seguridad", "severidad": "info",
-    "titulo": "Esa dirección no la podemos revisar",
-    "detalle": "La URL apunta a una red interna o privada. Solo revisamos apps "
-               "publicadas en internet. Envíanos el enlace público de tu app."}]},
-    open(sys.argv[2], "w"), ensure_ascii=False, indent=2)
-PY
-  echo "[revisar] URL apunta a red interna/privada — rechazada (SSRF guard)"
-  exit 4
+args=("$URL" "--out=$OUT")
+[[ -n "$REPO" ]] && args+=("--repo=$REPO")
+# Pruebas propias contra localhost: SUBESEGURO_ALLOW_LOCAL=1 (nunca en el pipeline público).
+[[ "${SUBESEGURO_ALLOW_LOCAL:-0}" == "1" ]] && args+=("--allow-local")
+
+MASTER_AUDIT_UA="SubeSeguroBot/1.0 (revision pre-lanzamiento)" "$ENGINE" "${args[@]}"
+rc=$?
+
+# ---- Persistir en SQLite: cache 24h + analítica de los hallazgos más comunes ----
+if [[ -f "$OUT/hallazgos.json" ]]; then
+  python3 "$ROOT/scripts/store.py" save "$OUT/hallazgos.json" 2>/dev/null || true
 fi
-
-findings=()   # cada uno: categoria|sev|titulo|detalle   (categoria: seguridad|experiencia)
-add() { findings+=("$1|$2|$3|$4"); }
-addsec() { add seguridad "$1" "$2" "$3"; }
-addexp() { add experiencia "$1" "$2" "$3"; }
-
-echo "[revisar] $URL  ->  $OUT"
-
-# ---- 0. ¿La app responde? ----
-# Una URL mal escrita o un sitio caído devuelve headers vacíos, y sin este chequeo
-# el motor los leería como "le faltan todos los headers de seguridad" = informe FALSO.
-STATUS="$("${CURL[@]}" -o /dev/null -w "%{http_code}" "$URL" 2>/dev/null)"
-if [[ "$STATUS" == "000" ]]; then
-  python3 - "$URL" "$OUT/hallazgos.json" <<'PY'
-import json, sys
-json.dump({"url": sys.argv[1], "accesible": False, "hallazgos": [{
-    "severidad": "info", "titulo": "No pudimos acceder a tu app",
-    "detalle": "La URL no respondió. Puede estar mal escrita, el sitio caído o "
-               "todavía sin publicar. Confirma el link (que empiece con https:// y "
-               "sea el correcto) e inténtalo de nuevo."}]},
-    open(sys.argv[2], "w"), ensure_ascii=False, indent=2)
-PY
-  echo "[revisar] URL no accesible (HTTP 000) — no genero informe de seguridad falso"
-  exit 3
-fi
-
-# ---- 1. Headers HTTP + TLS (seguridad) ----
-HDRS="$("${CURL[@]}" -D - -o /dev/null "$URL" 2>/dev/null)"
-hget() { echo "$HDRS" | grep -i "^$1:" | head -1 | cut -d: -f2- | tr -d '\r' | sed 's/^ *//'; }
-
-if [[ "$URL" == https://* ]]; then
-  [[ -z "$(hget strict-transport-security)" ]] && addsec alto "Sin HSTS" "Falta el header Strict-Transport-Security: un atacante en la red podria forzar la version http sin cifrar."
-else
-  addsec critico "El sitio no usa HTTPS" "El trafico viaja sin cifrar; cualquiera en la red puede leer datos y contrasenas."
-fi
-[[ -z "$(hget content-security-policy)" ]] && addsec medio "Sin Content-Security-Policy" "Falta CSP: sube el riesgo de inyeccion de scripts (XSS) en apps con contenido dinamico."
-[[ -z "$(hget x-frame-options)$(hget content-security-policy)" ]] && addsec medio "Sin proteccion contra clickjacking" "Falta X-Frame-Options o frame-ancestors: tu sitio puede ser embebido en un iframe enganoso."
-[[ -z "$(hget x-content-type-options)" ]] && addsec bajo "Sin X-Content-Type-Options" "Falta 'nosniff': el navegador puede interpretar archivos como un tipo distinto y abrir la puerta a ataques."
-[[ -z "$(hget referrer-policy)" ]] && addsec bajo "Sin Referrer-Policy" "Sin este header, tu app puede filtrar a otros sitios las URLs internas por las que navega el usuario."
-[[ -z "$(hget permissions-policy)" ]] && addsec bajo "Sin Permissions-Policy" "No se restringen camara, microfono ni geolocalizacion; conviene limitar lo que la pagina puede pedir."
-# sanitizar el valor del header antes de meterlo al informe (único dato del sitio que
-# va al texto): solo alfanumérico/espacio/.-/ y acotado, por si trae algo raro.
-POWERED="$(hget x-powered-by | tr -cd 'A-Za-z0-9 ./_-' | cut -c1-40)"
-[[ -n "$POWERED" ]] && addsec bajo "Filtra tecnologia del backend" "El header X-Powered-By expone '$POWERED'; da pistas gratis a un atacante. Conviene ocultarlo."
-# cookies sin flags de seguridad
-COOKIES="$(echo "$HDRS" | grep -i '^set-cookie:')"
-if [[ -n "$COOKIES" ]]; then
-  echo "$COOKIES" | grep -qi "httponly" || addsec medio "Cookies sin HttpOnly" "Hay cookies accesibles por JavaScript: si hay un XSS, se pueden robar sesiones. Deben ser HttpOnly."
-  echo "$COOKIES" | grep -qi "secure"   || addsec medio "Cookies sin Secure" "Hay cookies que pueden viajar sin cifrar (sin el flag Secure)."
-fi
-
-# ---- 2. Archivos sensibles expuestos (los clasicos del vibe-coding, seguridad) ----
-check_path() { # ruta  severidad  titulo  detalle
-  local code ct
-  read -r code ct < <("${CURL[@]}" -o /dev/null -w "%{http_code} %{content_type}" "$URL/$1" 2>/dev/null)
-  if [[ "$code" == "200" && "$ct" != text/html* ]]; then
-    addsec "$2" "$3" "$4 (encontrado en /$1)"
-  fi
-}
-check_path ".env"            critico "Archivo .env accesible"        "El archivo de variables de entorno (claves, tokens, contrasenas de BD) es descargable por cualquiera."
-check_path ".env.local"      critico ".env.local accesible"         "Variables de entorno locales descargables (suelen tener las claves reales)."
-check_path ".env.production" critico ".env.production accesible"     "El archivo de entorno de produccion es descargable: trae las claves reales en uso."
-check_path ".git/config"     critico ".git expuesto"                "El repositorio .git es accesible: se puede reconstruir todo tu codigo fuente e historial."
-check_path ".git/HEAD"       critico ".git expuesto"                "El repositorio .git es accesible: se puede reconstruir todo tu codigo fuente e historial."
-check_path "config.json"     alto    "config.json publico"          "Un archivo de configuracion es accesible y suele traer claves o endpoints internos."
-check_path "backup.sql"      critico "Dump de base de datos publico" "Hay un respaldo SQL descargable con, potencialmente, todos tus datos."
-check_path "backup.zip"      alto    "Respaldo .zip publico"        "Hay un archivo de respaldo descargable; puede contener codigo o datos sensibles."
-check_path ".DS_Store"       bajo    ".DS_Store expuesto"           "Filtra la lista de archivos de tus carpetas; da pistas de tu estructura interna."
-
-# ---- 3. Secretos en el HTML/JS servido al navegador (seguridad) ----
-BODY="$("${CURL[@]}" "$URL" 2>/dev/null)"
-if echo "$BODY" | grep -qiE 'service_role|sk_live_|AKIA[0-9A-Z]{16}|AIza[0-9A-Za-z_-]{35}|-----BEGIN [A-Z ]*PRIVATE KEY'; then
-  addsec critico "Clave secreta en el codigo del navegador" "Se detecto un patron de clave privada/secreta en el HTML o JS que se envia al cliente. Cualquiera con F12 la ve."
-fi
-if echo "$BODY" | grep -qiE 'supabase\.co' && ! echo "$BODY" | grep -qiE 'service_role'; then
-  addsec info "Usa Supabase" "Detectamos Supabase. Verifica que TODAS las tablas tengan Row Level Security activado (causa #1 de fugas de datos en apps con IA)."
-fi
-
-# ---- 4. Sourcemaps expuestos (seguridad) ----
-if echo "$BODY" | grep -qoE 'src="[^"]+\.js"' ; then
-  JS1="$(echo "$BODY" | grep -oE 'src="[^"]+\.js"' | head -1 | sed -E 's/src="([^"]+)"/\1/')"
-  [[ "$JS1" == /* ]] && JS1="${URL%/}$JS1"
-  if [[ "$JS1" == http* ]]; then
-    MAPCODE="$("${CURL[@]}" -o /dev/null -w "%{http_code}" "$JS1.map" 2>/dev/null)"
-    [[ "$MAPCODE" == "200" ]] && addsec medio "Sourcemaps publicos" "Los archivos .map estan accesibles: exponen tu codigo fuente original sin minificar."
-  fi
-fi
-
-# ---- 4b. Experiencia de usuario y performance (mejoras) ----
-# viewport (responsive en celular)
-echo "$BODY" | grep -qiE '<meta[^>]+name=["'"'"']?viewport' || addexp alto "Sin meta viewport" "Falta la etiqueta viewport: tu app se ve diminuta y desconfigurada en celulares. Es el arreglo #1 para mobile."
-# title y description (SEO / como se ve al compartir)
-echo "$BODY" | grep -qiE '<title>[^<]{3,}' || addexp medio "Sin titulo de pagina" "Falta un <title> descriptivo: afecta como te encuentran en Google y como se ve la pestana."
-echo "$BODY" | grep -qiE '<meta[^>]+name=["'"'"']?description' || addexp bajo "Sin meta description" "Sin descripcion, Google y las redes muestran un texto cualquiera al enlazar tu app."
-# Open Graph (como se ve al compartir el link)
-echo "$BODY" | grep -qiE 'property=["'"'"']?og:' || addexp bajo "Sin Open Graph" "Al compartir tu link en WhatsApp/redes no aparece imagen ni titulo lindo; se ve pobre."
-# favicon
-echo "$BODY" | grep -qiE 'rel=["'"'"']?(shortcut )?icon' || addexp bajo "Sin favicon" "Falta el iconito de la pestana; detalle chico pero da sensacion de app a medio terminar."
-# idioma
-echo "$BODY" | grep -qiE '<html[^>]+lang=' || addexp bajo "Sin idioma declarado" "El <html> no declara lang: afecta accesibilidad y el traductor del navegador."
-# peso de la pagina principal
-PAGE_BYTES="$(echo -n "$BODY" | wc -c)"
-if [[ "$PAGE_BYTES" -gt 3000000 ]]; then
-  addexp medio "Pagina inicial muy pesada" "El HTML inicial pesa $((PAGE_BYTES/1024/1024)) MB; en 4G carga lento y pierdes usuarios en los primeros segundos."
-fi
-# compresion
-echo "$HDRS" | grep -qiE '^content-encoding:\s*(gzip|br)' || addexp bajo "Sin compresion" "El servidor no comprime (gzip/brotli); las paginas pesan mas y cargan mas lento de lo necesario."
-
-# ---- 5. Auditoria de experiencia + screenshots (motor ux-audit) ----
-# Abre la pagina en chromium, mide de verdad (scroll horizontal, tamano de los
-# campos, targets tactiles, teclados, labels, validacion que bloquea envios) y
-# de paso deja las capturas. Reemplaza al bloque que solo sacaba fotos.
-#
-# chromium ejecuta el JS del sitio (potencialmente hostil): timeout duro + flags
-# de endurecimiento dentro del modulo. Corre bajo el aislamiento del systemd unit.
-UXJSON="$OUT/ux.json"
-rm -f "$UXJSON"
-if command -v node >/dev/null 2>&1 && [[ -d "$ROOT/node_modules/puppeteer-core" ]]; then
-  timeout 180 node "$ROOT/scripts/ux-audit/cli.mjs" "$URL" \
-      --out="$UXJSON" --shots="$OUT" --hoja="$OUT/hoja-revision.md" --timeout=30000 >/dev/null 2>&1 \
-    || echo "[revisar] ux-audit no completo la pasada; sigo con el resto"
-else
-  echo "[revisar] ux-audit no disponible (falta node o pnpm install); solo capturas"
-fi
-# Respaldo: si ux-audit no dejo capturas, sacarlas con chromium directo.
-if [[ ! -f "$OUT/screen-mobile.png" ]] && command -v chromium >/dev/null 2>&1; then
-  for vp in "390,844:mobile" "1280,900:desktop"; do
-    size="${vp%%:*}"; name="${vp##*:}"
-    timeout 30 chromium --headless=new --no-sandbox --disable-gpu --hide-scrollbars \
-      --disable-dev-shm-usage --disable-extensions --no-first-run --disable-plugins \
-      --window-size="$size" --screenshot="$OUT/screen-$name.png" "$URL" >/dev/null 2>&1 &
-  done
-  wait
-fi
-
-# ---- 6. Repo (opcional): gitleaks sobre el clon ----
-if [[ -n "$REPO" ]]; then
-  TMP="$(mktemp -d)"
-  # clon acotado: shallow, sin checkout de submódulos, con timeout (anti repo gigante/lento)
-  if GIT_TERMINAL_PROMPT=0 timeout 90 git clone --depth 1 --no-tags \
-       --recurse-submodules=no --quiet "$REPO" "$TMP" 2>/dev/null; then
-    LEAKS="$OUT/gitleaks.json"
-    gitleaks detect --source "$TMP" --report-format json --report-path "$LEAKS" --no-banner >/dev/null 2>&1
-    N="$(jq 'length' "$LEAKS" 2>/dev/null || echo 0)"
-    [[ "$N" -gt 0 ]] && addsec critico "$N secreto(s) en el historial del repo" "gitleaks encontro claves/tokens commiteados. Aunque los borres ahora, quedan en el historial de git y hay que rotarlos."
-  else
-    addsec info "No se pudo clonar el repo" "El repositorio no es publico o la URL es incorrecta; se reviso solo la URL del sitio."
-  fi
-  rm -rf "$TMP"
-fi
-
-# ---- Emitir hallazgos.json (ordenado por severidad, con categoria y conteos) ----
-python3 - "$OUT/hallazgos.json" "$URL" "$UXJSON" <<'PY' "${findings[@]}"
-import json, os, sys
-out, url, uxjson = sys.argv[1], sys.argv[2], sys.argv[3]
-order = {"critico":0,"alto":1,"medio":2,"bajo":3,"info":4}
-items = []
-for raw in sys.argv[4:]:
-    cat, sev, titulo, detalle = raw.split("|", 3)
-    items.append({"categoria": cat, "severidad": sev, "titulo": titulo, "detalle": detalle})
-
-# Hallazgos del motor de experiencia (ux-audit). Si no corrio, el informe sale
-# igual con los chequeos estaticos; nunca se cae por esto.
-if os.path.exists(uxjson):
-    try:
-        ux = json.load(open(uxjson))
-        for h in ux.get("hallazgos", []):
-            if h.get("titulo") and h.get("detalle"):
-                items.append({k: h[k] for k in ("categoria","severidad","titulo","detalle") if k in h}
-                             | ({"capa": h["capa"]} if h.get("capa") else {})
-                             | ({"evidencia": h["evidencia"][:5]} if h.get("evidencia") else {}))
-    except Exception as e:
-        print(f"[revisar] no pude leer {uxjson}: {e}", file=sys.stderr)
-
-items.sort(key=lambda x: order.get(x["severidad"], 9))
-n_seg = sum(1 for i in items if i["categoria"] == "seguridad")
-n_exp = sum(1 for i in items if i["categoria"] == "experiencia")
-data = {"url": url, "accesible": True, "hallazgos": items,
-        "conteo": {"total": len(items), "seguridad": n_seg, "experiencia": n_exp}}
-json.dump(data, open(out, "w"), ensure_ascii=False, indent=2)
-print(f"[revisar] {len(items)} hallazgos ({n_seg} seguridad, {n_exp} experiencia) -> {out}")
-PY
-
-# ---- Persistir en SQLite: cache + analitica de los mas comunes ----
-python3 "$ROOT/scripts/store.py" save "$OUT/hallazgos.json" 2>/dev/null || true
-
-echo "[revisar] listo. Revisa $OUT/hallazgos.json y screen-*.png"
+exit $rc

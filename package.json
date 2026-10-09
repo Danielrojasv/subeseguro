@@ -6,12 +6,9 @@
   "private": true,
   "scripts": {
     "test": "node --test test/",
-    "ux": "node scripts/ux-audit/cli.mjs",
-    "ux:self": "node scripts/ux-audit/cli.mjs http://localhost:8080 --fail-on=alto"
+    "revisar": "scripts/revisar.sh",
+    "informe": "scripts/generar-informe.sh"
   },
   "license": "UNLICENSED",
-  "packageManager": "pnpm@10.34.4",
-  "dependencies": {
-    "puppeteer-core": "^25.5.0"
-  }
+  "packageManager": "pnpm@10.34.4"
 }

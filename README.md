@@ -41,71 +41,27 @@ typst compile informe/reporte-ejemplo.typ   # regenerar el PDF (requiere fuente 
    activación de formsubmit — hay que hacer clic una vez.
 2. Tras activar, formsubmit entrega un endpoint alias aleatorio: reemplazar el email del
    `action` del form por ese alias (para no exponer el correo) y re-pushear.
-3. Tier GRATIS (automático supervisado): correr `scripts/revisar.sh <url> [repo]` → genera
-   los hallazgos deterministas → PDF top-3 con la plantilla Typst → se reenvía al cliente.
+3. Tier GRATIS (automático supervisado): correr `scripts/revisar.sh <url> [repo]` → el motor
+   master-audit genera los hallazgos deterministas → PDF top-3 con la plantilla Typst → se reenvía al cliente.
    Cero trabajo manual de análisis; solo revisar el PDF antes de enviar.
 4. Tier PAGADO: revisión senior de Daniel (informe completo) o done-for-you.
    Cobros manuales por correo (tarjeta/PayPal/transferencia): Lemon Squeezy rechazó
    la tienda el 26-jul-2026; alternativa MoR futura si el piloto valida (Paddle).
 5. Tope del piloto: 10 revisiones gratis/día. El excedente recibe "estamos llenos esta semana".
 
-## Motor de experiencia (`scripts/ux-audit/`)
+## Motor: master-audit (`/opt/master-audit`)
 
-Abre la página en chromium y **mide** en vez de adivinar. De paso deja las capturas
-mobile y desktop que consume el informe. Seis capas:
+Los chequeos (seguridad pasiva, base, experiencia en chromium con sus seis capas,
+accesibilidad, performance, jerarquía, confianza, gitleaks del repo, hoja de revisión
+senior) viven en el proyecto aparte **master-audit** (repo `Danielrojasv/master-audit`).
+`scripts/revisar.sh` es la puerta: arma el directorio `informes/<slug>/`, firma el user
+agent como SubeSeguroBot, llama a `/opt/master-audit/bin/master-audit` y persiste el
+resultado en `scans.db`. Mantiene los códigos de salida del motor (0 ok, 3 no responde,
+4 red interna) que `generar-informe.sh` y el pipeline ya entienden.
 
-| Capa | Qué mide |
-|------|----------|
-| `mobile` | scroll horizontal, h1 que no escala, inputs bajo 16px (zoom de iOS), targets bajo 44px, teclado por campo, imágenes que desbordan, dropdowns a mano, theme-color, safe areas, mailto que muere en webviews |
-| `formulario` | campos sin label, `type="url"` que bloquea envíos en silencio, patterns sin explicación, opcionales sin marcar, ausencia de analítica, sin acción en el primer pantallazo, precio escondido |
-| `accesibilidad` | contraste WCAG por bloque con el umbral correcto según tamaño y peso, foco invisible, alt, botones sin nombre accesible, anclas sin scroll suave, encabezados que saltan niveles |
-| `performance` | errores de consola al cargar, LCP, peso transferido, imágenes sobredimensionadas, CLS, estáticos sin caché, `setInterval` de pocos segundos, APIs de IA llamadas desde el navegador |
-| `jerarquia` | marca que compite con la nav, escala tipográfica plana, exceso de colores de acento, párrafos largos centrados |
-| `confianza` | pide correo sin decir para qué, nadie firma la página |
-
-Lo que necesita ojo humano no se automatiza ni se inventa: sale en
-`hoja-revision.md` (`--hoja=`), la hoja de la pasada senior con los 18 ítems de
-criterio y un resumen de lo que el motor ya cubrió.
-
-**Verificación activa de base de datos (`--verificar-datos`, apagada por defecto).**
-La capa `datos` deja de solo observar y le consulta al Supabase/Firebase del sitio
-—con la clave pública que el propio sitio ya publica— si quedó sin reglas de acceso,
-que es la fuga número uno en apps hechas con IA. Como cruza la línea de "solo pasivo",
-tiene cuatro candados (apagado por defecto, nada adivinado, solo lectura acotada,
-no guarda nada) descritos en `scripts/ux-audit/verificar-datos.mjs` y en
-`SECURITY-RULES.md` #8. **Solo para revisiones internas y sitios propios o con permiso
-del dueño**; el camino público (`revisar.sh`, pipeline) NO la activa hasta que el
-formulario tenga el check de autorización. Uso: `pnpm ux <url> --verificar-datos`.
-
-Está construido como herramienta suelta a propósito, porque tiene tres usos:
-
-```bash
-pnpm install                                   # una vez (usa el chromium del sistema)
-
-pnpm ux https://app-del-cliente.com            # 1. motor, sobre el sitio de un cliente
-pnpm ux http://localhost:8080                  # 2. mientras construyes un sitio propio
-pnpm ux http://localhost:8080 --fail-on=alto   # 3. puerta de CI, sale 1 si hay algo grave
-```
-
-Opciones: `--json`, `--out=archivo.json`, `--hoja=archivo.md`, `--shots=dir`, `--timeout=ms`.
-
-Arquitectura, y la razón de que sea así:
-
-- `probe.mjs` corre **dentro** de la página y solo recolecta datos crudos. No juzga nada.
-- `checks/*.mjs` son funciones puras sobre ese snapshot. Ahí vive todo el criterio.
-- Esa separación permite testear sin navegador (snapshots sintéticos, milisegundos) y
-  agregar un chequeo nuevo sin tocar el recolector.
-
-`revisar.sh` lo llama y fusiona sus hallazgos en `hallazgos.json` bajo la categoría
-`experiencia`, con un campo `capa` (`mobile`, `formulario`, …). Si el módulo no está
-instalado o falla, el informe sale igual con los chequeos estáticos.
-
-Fixtures de referencia en `test/fixtures/`: `rota.html` tiene todos los problemas y
-`limpia.html` no tiene ninguno. La limpia es además la semilla de la plantilla base:
-un sitio nuevo debería nacer cumpliendo lo que hay ahí.
-
-Inventario completo de la metodología y las fases que faltan: mdview
-`subeseguro-motor-experiencia-plan.md`.
+Qué revisa cada capa, cómo agregar un chequeo y las reglas de seguridad del motor están
+en el README y `SECURITY-RULES.md` de master-audit. Para apuntar a otra copia del motor:
+`MASTER_AUDIT_BIN=/ruta/bin/master-audit`.
 
 ## Reglas
 

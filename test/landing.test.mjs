@@ -98,21 +98,27 @@ test('formulario apunta al correo de soporte de Veta', () => {
   assert.match(html, /formsubmit\.co\/soporte\.vetastudios@gmail\.com/);
 });
 
-test('motor: URL inaccesible NO genera informe de seguridad falso', () => {
-  // el guard vive en revisar.sh: HTTP 000 → hallazgos con accesible:false, no headers falsos
+test('motor: revisar.sh es un wrapper del motor master-audit (no duplica chequeos)', () => {
   const sh = readFileSync(join(root, 'scripts/revisar.sh'), 'utf8');
-  assert.match(sh, /STATUS=.*http_code/);
-  assert.match(sh, /"accesible": False/);
-  assert.match(sh, /exit 3/);
-  const typ = readFileSync(join(root, 'scripts/informe.typ'), 'utf8');
-  assert.match(typ, /No pudimos acceder a tu app/);
+  assert.match(sh, /MASTER_AUDIT_BIN:-\/opt\/master-audit\/bin\/master-audit/);
+  assert.match(sh, /--out=\$OUT/);
+  assert.match(sh, /--allow-local/);        // solo con SUBESEGURO_ALLOW_LOCAL=1
+  assert.match(sh, /MASTER_AUDIT_UA="SubeSeguroBot/);
+  assert.match(sh, /store\.py" save/);       // la persistencia es del producto
+  assert.doesNotMatch(sh, /ssrf_ok|addsec|check_path/, 'los chequeos viven en master-audit');
+  assert.match(sh, /exit \$rc/);            // respeta los códigos del motor (0/3/4)
 });
 
-test('motor: categoriza hallazgos y cuenta por tipo (seguridad/experiencia)', () => {
-  const sh = readFileSync(join(root, 'scripts/revisar.sh'), 'utf8');
-  assert.match(sh, /addsec\b/);
-  assert.match(sh, /addexp\b/);
+test('motor: el motor master-audit está instalado y conserva los guards', () => {
+  const engine = process.env.MASTER_AUDIT_BIN || '/opt/master-audit/bin/master-audit';
+  if (!existsSync(engine)) return;          // CI ajeno sin el motor: no inventar
+  const sh = readFileSync(engine, 'utf8');
+  assert.match(sh, /ssrf_ok/);
+  assert.match(sh, /100\.64\.0\.0\/10/);
+  assert.match(sh, /"accesible": False/);
   assert.match(sh, /"conteo":/);
+  const typ = readFileSync(join(root, 'scripts/informe.typ'), 'utf8');
+  assert.match(typ, /No pudimos acceder a tu app/);
 });
 
 test('informe: teaser del candado con conteo real', () => {
@@ -127,17 +133,3 @@ test('persistencia: store.py existe con save/fresh/comunes', () => {
     assert.ok(py.includes(cmd), `falta ${cmd}`);
 });
 
-test('seguridad: guard SSRF rechaza red interna (localhost/LAN/Tailscale)', () => {
-  const sh = readFileSync(join(root, 'scripts/revisar.sh'), 'utf8');
-  assert.match(sh, /ssrf_ok/);
-  assert.match(sh, /is_private or ip\.is_loopback/);
-  assert.match(sh, /100\.64\.0\.0\/10/);   // CGNAT/Tailscale
-  assert.match(sh, /SSRF guard/);
-});
-
-test('seguridad: límites de recursos y hardening del navegador', () => {
-  const sh = readFileSync(join(root, 'scripts/revisar.sh'), 'utf8');
-  assert.match(sh, /--max-filesize/);
-  assert.match(sh, /timeout 30 chromium/);
-  assert.match(sh, /timeout 90 git clone/);
-});
